@@ -20,7 +20,7 @@ func NewMachineRepository(db *gorm.DB) *MachineRepository {
 func (r *MachineRepository) FindAll(ctx context.Context) ([]model.Machine, error) {
 	var machines []model.Machine
 	// 💡 生SQLは一切なし！GORMが自動的に「SELECT * FROM machines ORDER BY sort_order ASC」を発行します
-	err := r.db.WithContext(ctx).Order("sort_order asc").Find(&machines).Error
+	err := r.db.WithContext(ctx).Preload("Manufacturer").Order("sort_order asc, id asc").Find(&machines).Error
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func (r *MachineRepository) FindAll(ctx context.Context) ([]model.Machine, error
 // FindByID は指定されたIDの機種を1件取得します
 func (r *MachineRepository) FindByID(ctx context.Context, id int64) (*model.Machine, error) {
 	var machine model.Machine
-	err := r.db.WithContext(ctx).First(&machine, id).Error
+	err := r.db.WithContext(ctx).Preload("Manufacturer").First(&machine, id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil // レコードが見つからない場合はnilを返す
 	}

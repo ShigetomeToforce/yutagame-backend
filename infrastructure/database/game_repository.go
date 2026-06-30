@@ -22,7 +22,13 @@ func (r *GameRepository) FindAll(ctx context.Context, machineID int64, manufactu
 
 	// 💡 Preload("Keywords") と書くだけで、GORMが中間テーブルを自動JOINして
 	// 構造体の中の Keywords スライスにデータを全自動で詰め込んでくれます！
-	tx := r.db.WithContext(ctx).Preload("Keywords").Order("release_date asc")
+	// 💡 Preload を追加：Keywords だけでなく、機種・ジャンル・メーカーも全部一緒に読み込む！
+	tx := r.db.WithContext(ctx).
+		Preload("Manufacturer").
+		Preload("Machine").
+		Preload("Genre").
+		Preload("Keywords").
+		Order("release_date asc")
 
 	// 機種IDによる絞り込み
 	if machineID > 0 {
@@ -52,7 +58,13 @@ func (r *GameRepository) FindAll(ctx context.Context, machineID int64, manufactu
 // FindByID は指定されたIDのゲームを1件取得します（詳細画面用）
 func (r *GameRepository) FindByID(ctx context.Context, id int64) (*model.Game, error) {
 	var game model.Game
-	err := r.db.WithContext(ctx).Preload("Keywords").First(&game, id).Error
+	err := r.db.WithContext(ctx).
+		Preload("Manufacturer").
+		Preload("Machine").
+		Preload("Genre").
+		Preload("Keywords").
+		First(&game, id).Error
+
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}

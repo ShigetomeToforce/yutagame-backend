@@ -25,6 +25,11 @@ type Game struct {
 	CreatedAt       time.Time `gorm:"column:created_at;not null" json:"createdAt"`
 	UpdatedAt       time.Time `gorm:"column:updated_at;not null" json:"updatedAt"`
 
+	// 💡 依存関係の解消：GORMの1対多（Belongs To）リレーション群
+	Manufacturer *Manufacturer `gorm:"foreignKey:ManufacturerID;" json:"manufacturer,omitempty"`
+	Machine      *Machine      `gorm:"foreignKey:MachineID;" json:"machine,omitempty"`
+	Genre        *Genre        `gorm:"foreignKey:GenreID;" json:"genre,omitempty"`
+
 	// 💡 凄まじいポイント：GORMに「game_keywordsという中間テーブルを使って、紐づくKeywordsを全自動でガッチャンコしてね」と1行で命令します
 	Keywords []Keyword `gorm:"many2many:game_keywords;" json:"keywords"`
 }
