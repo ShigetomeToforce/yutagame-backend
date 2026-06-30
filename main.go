@@ -66,6 +66,9 @@ func main() {
 		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
 	}))
 
+	// 💡 コンテナ内の /app/storage フォルダを /images というURLパスで外部公開する
+	e.Static("/images", "storage")
+
 	// 5. ルーティング定義 (URLとWeb窓口の紐付け)
 	api := e.Group("/api")
 	{

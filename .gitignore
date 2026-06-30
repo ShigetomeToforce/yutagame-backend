@@ -30,3 +30,15 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# 💡 storage 配下の画像ファイル（バイナリ）はGit管理から除外する
+storage/games/*
+storage/machines/*
+storage/genres/*
+storage/manufacturers/*
+
+# 💡 ただし、空のフォルダ構造だけはGitに追跡させたい（クローンした直後にフォルダがないエラーを防ぐため）
+!storage/games/.gitkeep
+!storage/machines/.gitkeep
+!storage/genres/.gitkeep
+!storage/manufacturers/.gitkeep

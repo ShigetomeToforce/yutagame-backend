@@ -1,6 +1,5 @@
-version: "3.8"
-
 services:
+  # 🐬 既存のMySQL設定（1文字も変えずに完全に維持・永続化も継続）
   db:
     image: mysql:8.0
     container_name: yutagame-mysql
@@ -17,5 +16,27 @@ services:
       - mysql_data:/var/lib/mysql
       - ./init:/docker-entrypoint-initdb.d
 
+  # 🚀 バックエンド（Go）の設定を追加
+  backend:
+    build: .
+    container_name: yutagame-backend
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      # DBへの接続情報は、上記の「db」サービスの設定内容と完全に一致させています
+      - DB_USER=yuta_user
+      - DB_PASSWORD=yuta_password
+      - DB_HOST=db # 💡 Docker内から通信するため、サービス名の「db」を指定
+      - DB_PORT=3306
+      - DB_NAME=yutagame
+      - BACKEND_PORT=8080
+    volumes:
+      # 💡 これでコンテナが消えても、storage/ 配下の画像はローカルに安全に残り続けます！
+      - ./storage:/app/storage
+    depends_on:
+      - db
+
+# 💡 DB用の永続化領域の定義もそのまま維持
 volumes:
   mysql_data:
