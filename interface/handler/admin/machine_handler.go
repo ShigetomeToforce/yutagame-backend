@@ -1,19 +1,21 @@
-package handler
+package admin
 
 import (
 	"net/http"
 	"strconv"
-	"yutagame-backend/application/usecase"
+	"yutagame-backend/application/usecase/admin"
+	"yutagame-backend/interface/handler"
+
 	"yutagame-backend/domain/model"
 
 	"github.com/labstack/echo/v4"
 )
 
 type MachineHandler struct {
-	machineUseCase *usecase.MachineUseCase
+	machineUseCase *admin.MachineUseCase
 }
 
-func NewMachineHandler(machineUseCase *usecase.MachineUseCase) *MachineHandler {
+func NewMachineHandler(machineUseCase *admin.MachineUseCase) *MachineHandler {
 	return &MachineHandler{machineUseCase: machineUseCase}
 }
 
@@ -41,7 +43,9 @@ func (h *MachineHandler) GetAll(c echo.Context) error {
 	ctx := c.Request().Context()
 	machines, err := h.machineUseCase.GetAllMachines(ctx)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{
+			Message: err.Error(),
+		})
 	}
 	return c.JSON(http.StatusOK, machines)
 }
@@ -59,16 +63,22 @@ func (h *MachineHandler) GetByID(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "invalid id format"})
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{
+			Message: "不正なID形式です。整数値を指定してください。",
+		})
 	}
 
 	ctx := c.Request().Context()
 	machine, err := h.machineUseCase.GetMachineByID(ctx, id)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{
+			Message: err.Error(),
+		})
 	}
 	if machine == nil {
-		return c.JSON(http.StatusNotFound, echo.Map{"error": "machine not found"})
+		return c.JSON(http.StatusNotFound, handler.ErrorResponse{
+			Message: "指定されたIDの機種情報が見つかりませんでした。",
+		})
 	}
 
 	return c.JSON(http.StatusOK, machine)
@@ -87,12 +97,16 @@ func (h *MachineHandler) GetByID(c echo.Context) error {
 func (h *MachineHandler) Create(c echo.Context) error {
 	var m model.Machine
 	if err := c.Bind(&m); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{
+			Message: err.Error(),
+		})
 	}
 
 	ctx := c.Request().Context()
 	if err := h.machineUseCase.CreateMachine(ctx, &m); err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{
+			Message: err.Error(),
+		})
 	}
 
 	return c.JSON(http.StatusCreated, m)

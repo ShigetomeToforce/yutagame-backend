@@ -5,10 +5,8 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"yutagame-backend/application/usecase"
-	"yutagame-backend/application/usecase/admin" // 💡 追加
+	adminUsecase "yutagame-backend/application/usecase/admin"
 	"yutagame-backend/infrastructure/database"
-	"yutagame-backend/interface/handler"
 	adminHandler "yutagame-backend/interface/handler/admin"  // 💡 エイリアスを付けてインポート
 	customMiddleware "yutagame-backend/interface/middleware" // 💡 追加
 
@@ -62,20 +60,20 @@ func main() {
 	_ = database.NewUserRepository(db) // 将来の一般ユーザー用（準備だけ）
 
 	// --- UseCase 層 ---
-	machineUseCase := usecase.NewMachineUseCase(machineRepo)
-	gameUseCase := usecase.NewGameUseCase(gameRepo)
-	keywordUseCase := usecase.NewKeywordUseCase(keywordRepo)
-	genreUseCase := usecase.NewGenreUseCase(genreRepo)
-	manufacturerUseCase := usecase.NewManufacturerUseCase(manufacturerRepo)
-	adminAuthUseCase := admin.NewAdminAuthUseCase(adminRepo) // 💡 追加
+	machineUseCase := adminUsecase.NewMachineUseCase(machineRepo)
+	gameUseCase := adminUsecase.NewGameUseCase(gameRepo)
+	keywordUseCase := adminUsecase.NewKeywordUseCase(keywordRepo)
+	genreUseCase := adminUsecase.NewGenreUseCase(genreRepo)
+	manufacturerUseCase := adminUsecase.NewManufacturerUseCase(manufacturerRepo)
+	adminAuthUseCase := adminUsecase.NewAdminAuthUseCase(adminRepo)
 
 	// --- Handler 層 ---
-	machineHandler := handler.NewMachineHandler(machineUseCase)
-	gameHandler := handler.NewGameHandler(gameUseCase)
-	keywordHandler := handler.NewKeywordHandler(keywordUseCase)
-	genreHandler := handler.NewGenreHandler(genreUseCase)
-	manufacturerHandler := handler.NewManufacturerHandler(manufacturerUseCase)
-	adminAuthHandler := adminHandler.NewAdminAuthHandler(adminAuthUseCase) // 💡 追加
+	machineHandler := adminHandler.NewMachineHandler(machineUseCase)
+	gameHandler := adminHandler.NewGameHandler(gameUseCase)
+	keywordHandler := adminHandler.NewKeywordHandler(keywordUseCase)
+	genreHandler := adminHandler.NewGenreHandler(genreUseCase)
+	manufacturerHandler := adminHandler.NewManufacturerHandler(manufacturerUseCase)
+	adminAuthHandler := adminHandler.NewAdminAuthHandler(adminAuthUseCase)
 
 	// 4. Echo インスタンスの生成と共通設定
 	e := echo.New()

@@ -1,17 +1,18 @@
-package handler
+package admin
 
 import (
 	"net/http"
-	"yutagame-backend/application/usecase"
+	"yutagame-backend/application/usecase/admin"
+	"yutagame-backend/interface/handler"
 
 	"github.com/labstack/echo/v4"
 )
 
 type GenreHandler struct {
-	genreUseCase *usecase.GenreUseCase
+	genreUseCase *admin.GenreUseCase
 }
 
-func NewGenreHandler(genreUseCase *usecase.GenreUseCase) *GenreHandler {
+func NewGenreHandler(genreUseCase *admin.GenreUseCase) *GenreHandler {
 	return &GenreHandler{genreUseCase: genreUseCase}
 }
 
@@ -25,7 +26,9 @@ func (h *GenreHandler) GetAll(c echo.Context) error {
 	ctx := c.Request().Context()
 	genres, err := h.genreUseCase.GetAllGenres(ctx)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{
+			Message: err.Error(),
+		})
 	}
 	return c.JSON(http.StatusOK, genres)
 }

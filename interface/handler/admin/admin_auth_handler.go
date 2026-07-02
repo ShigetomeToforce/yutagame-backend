@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 	"yutagame-backend/application/usecase/admin"
+	"yutagame-backend/interface/handler"
 
 	"github.com/labstack/echo/v4"
 )
@@ -41,13 +42,17 @@ type AdminSaveRequest struct {
 func (h *AdminAuthHandler) Login(c echo.Context) error {
 	var req LoginRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{
+			Message: err.Error(),
+		})
 	}
 
 	ctx := c.Request().Context()
 	token, err := h.adminAuthUseCase.Login(ctx, req.Email, req.Password)
 	if err != nil {
-		return c.JSON(http.StatusUnauthorized, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusUnauthorized, handler.ErrorResponse{
+			Message: "メールアドレスまたはパスワードが違います。",
+		})
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{"token": token})
@@ -65,7 +70,9 @@ func (h *AdminAuthHandler) GetAll(c echo.Context) error {
 	ctx := c.Request().Context()
 	admins, err := h.adminAuthUseCase.GetAllAdmins(ctx)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{
+			Message: err.Error(),
+		})
 	}
 	return c.JSON(http.StatusOK, admins)
 }
@@ -85,7 +92,9 @@ func (h *AdminAuthHandler) GetByID(c echo.Context) error {
 	ctx := c.Request().Context()
 	adminData, err := h.adminAuthUseCase.GetAdminByID(ctx, id)
 	if err != nil || adminData == nil {
-		return c.JSON(http.StatusNotFound, echo.Map{"error": "admin not found"})
+		return c.JSON(http.StatusNotFound, handler.ErrorResponse{
+			Message: "指定されたIDの管理者情報が見つかりませんでした。",
+		})
 	}
 	return c.JSON(http.StatusOK, adminData)
 }
@@ -104,13 +113,17 @@ func (h *AdminAuthHandler) GetByID(c echo.Context) error {
 func (h *AdminAuthHandler) Create(c echo.Context) error {
 	var req AdminSaveRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{
+			Message: err.Error(),
+		})
 	}
 
 	ctx := c.Request().Context()
 	adminData, err := h.adminAuthUseCase.CreateAdmin(ctx, req.Name, req.Email, req.Password, req.RoleType)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{
+			Message: err.Error(),
+		})
 	}
 	return c.JSON(http.StatusCreated, adminData)
 }
@@ -131,13 +144,17 @@ func (h *AdminAuthHandler) Update(c echo.Context) error {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	var req AdminSaveRequest
 	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{
+			Message: err.Error(),
+		})
 	}
 
 	ctx := c.Request().Context()
 	adminData, err := h.adminAuthUseCase.UpdateAdmin(ctx, id, req.Name, req.Email, req.Password, req.RoleType)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{
+			Message: err.Error(),
+		})
 	}
 	return c.JSON(http.StatusOK, adminData)
 }
@@ -155,7 +172,9 @@ func (h *AdminAuthHandler) Delete(c echo.Context) error {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	ctx := c.Request().Context()
 	if err := h.adminAuthUseCase.DeleteAdmin(ctx, id); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{
+			Message: err.Error(),
+		})
 	}
 	return c.NoContent(http.StatusNoContent)
 }

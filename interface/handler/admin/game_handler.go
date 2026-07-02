@@ -1,19 +1,21 @@
-package handler
+package admin
 
 import (
 	"net/http"
 	"strconv"
-	"yutagame-backend/application/usecase"
+	"yutagame-backend/application/usecase/admin"
+	"yutagame-backend/interface/handler"
+
 	"yutagame-backend/domain/model"
 
 	"github.com/labstack/echo/v4"
 )
 
 type GameHandler struct {
-	gameUseCase *usecase.GameUseCase
+	gameUseCase *admin.GameUseCase
 }
 
-func NewGameHandler(gameUseCase *usecase.GameUseCase) *GameHandler {
+func NewGameHandler(gameUseCase *admin.GameUseCase) *GameHandler {
 	return &GameHandler{gameUseCase: gameUseCase}
 }
 
@@ -56,7 +58,9 @@ func (h *GameHandler) Search(c echo.Context) error {
 	ctx := c.Request().Context()
 	games, err := h.gameUseCase.SearchGames(ctx, machineID, manufacturerID, keywordID)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{
+			Message: err.Error(),
+		})
 	}
 
 	return c.JSON(http.StatusOK, games)
@@ -76,16 +80,22 @@ func (h *GameHandler) GetByID(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "invalid id format"})
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{
+			Message: "不正なID形式です。整数値を指定してください。",
+		})
 	}
 
 	ctx := c.Request().Context()
 	game, err := h.gameUseCase.GetGameByID(ctx, id)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{
+			Message: err.Error(),
+		})
 	}
 	if game == nil {
-		return c.JSON(http.StatusNotFound, echo.Map{"error": "game not found"})
+		return c.JSON(http.StatusNotFound, handler.ErrorResponse{
+			Message: "指定されたIDのゲーム情報が見つかりませんでした。",
+		})
 	}
 
 	return c.JSON(http.StatusOK, game)
@@ -104,12 +114,16 @@ func (h *GameHandler) GetByID(c echo.Context) error {
 func (h *GameHandler) Create(c echo.Context) error {
 	var g model.Game
 	if err := c.Bind(&g); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{
+			Message: err.Error(),
+		})
 	}
 
 	ctx := c.Request().Context()
 	if err := h.gameUseCase.CreateGame(ctx, &g); err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{
+			Message: err.Error(),
+		})
 	}
 
 	return c.JSON(http.StatusCreated, g)
