@@ -15,6 +15,12 @@ func NewManufacturerHandler(manufacturerUseCase *usecase.ManufacturerUseCase) *M
 	return &ManufacturerHandler{manufacturerUseCase: manufacturerUseCase}
 }
 
+// GetAll メーカー一覧取得
+// @Summary      メーカー一覧取得
+// @Tags         Masters
+// @Security     BearerAuth
+// @Success      200  {array}  model.Manufacturer
+// @Router       /admin/manufacturers [get]
 func (h *ManufacturerHandler) GetAll(c echo.Context) error {
 	ctx := c.Request().Context()
 	manufacturers, err := h.manufacturerUseCase.GetAllManufacturers(ctx)

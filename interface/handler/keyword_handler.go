@@ -15,7 +15,12 @@ func NewKeywordHandler(keywordUseCase *usecase.KeywordUseCase) *KeywordHandler {
 	return &KeywordHandler{keywordUseCase: keywordUseCase}
 }
 
-// GetAll はキーワード一覧を返すAPIエンドポイントです
+// GetAll キーワード一覧取得
+// @Summary      キーワード一覧取得
+// @Tags         Masters
+// @Security     BearerAuth
+// @Success      200  {array}  model.Keyword
+// @Router       /admin/keywords [get]
 func (h *KeywordHandler) GetAll(c echo.Context) error {
 	ctx := c.Request().Context()
 	keywords, err := h.keywordUseCase.GetAllKeywords(ctx)

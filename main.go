@@ -6,16 +6,33 @@ import (
 	"net/http"
 	"os"
 	"yutagame-backend/application/usecase"
+	"yutagame-backend/application/usecase/admin" // 💡 追加
 	"yutagame-backend/infrastructure/database"
 	"yutagame-backend/interface/handler"
+	adminHandler "yutagame-backend/interface/handler/admin"  // 💡 エイリアスを付けてインポート
+	customMiddleware "yutagame-backend/interface/middleware" // 💡 追加
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+
+	_ "yutagame-backend/docs" // 💡 swag init で自動生成されるドキュメントを読み込む
+
+	echoSwagger "github.com/swaggo/echo-swagger" //
 )
 
+// @title           Yutagame Backend API
+// @version         1.0
+// @description     ゲーム在庫管理システムのバックエンドAPI仕様書
+// @host            localhost:8080
+// @BasePath        /api
+
+// @securityDefinitions.apikey BearerAuth
+// @in                         header
+// @name                       Authorization
+// @description                "Bearer {token}" の形式でJWTトークンを入力してください。
 func main() {
 	// 1. データベース接続情報 (コンテナ環境変数から取得)
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
@@ -41,8 +58,8 @@ func main() {
 	keywordRepo := database.NewKeywordRepository(db)
 	genreRepo := database.NewGenreRepository(db)
 	manufacturerRepo := database.NewManufacturerRepository(db)
-	_ = database.NewAdminRepository(db) // 認証フェーズで使用するため初期化の準備だけ
-	_ = database.NewUserRepository(db)  // 同上
+	adminRepo := database.NewAdminRepository(db)
+	_ = database.NewUserRepository(db) // 将来の一般ユーザー用（準備だけ）
 
 	// --- UseCase 層 ---
 	machineUseCase := usecase.NewMachineUseCase(machineRepo)
@@ -50,6 +67,7 @@ func main() {
 	keywordUseCase := usecase.NewKeywordUseCase(keywordRepo)
 	genreUseCase := usecase.NewGenreUseCase(genreRepo)
 	manufacturerUseCase := usecase.NewManufacturerUseCase(manufacturerRepo)
+	adminAuthUseCase := admin.NewAdminAuthUseCase(adminRepo) // 💡 追加
 
 	// --- Handler 層 ---
 	machineHandler := handler.NewMachineHandler(machineUseCase)
@@ -57,6 +75,7 @@ func main() {
 	keywordHandler := handler.NewKeywordHandler(keywordUseCase)
 	genreHandler := handler.NewGenreHandler(genreUseCase)
 	manufacturerHandler := handler.NewManufacturerHandler(manufacturerUseCase)
+	adminAuthHandler := adminHandler.NewAdminAuthHandler(adminAuthUseCase) // 💡 追加
 
 	// 4. Echo インスタンスの生成と共通設定
 	e := echo.New()
@@ -65,32 +84,52 @@ func main() {
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{"*"},
 		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
+		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization}, // 💡 Authorizationヘッダーを許可
 	}))
 
-	// 💡 画像ファイルの静的配信を有効化 (/images/games/1.jpg などでアクセス可能に)
+	// 画像ファイルの静的配信を有効化
 	e.Static("/images", "storage")
+
+	// 💡 Swagger UI のエンドポイントを追加 (認証なしで誰でも見られる場所)
+	e.GET("/swagger/*", echoSwagger.WrapHandler)
 
 	// 5. ルーティング定義
 	api := e.Group("/api")
 	{
-		// 🎮 ゲーム関連API
-		api.GET("/games", gameHandler.Search)
-		api.GET("/games/:id", gameHandler.GetByID)
-		api.POST("/games", gameHandler.Create)
+		// 🔓 【完全公開エリア】ログインAPIのみ外に出す
+		api.POST("/admin/login", adminAuthHandler.Login)
 
-		// 💻 機種関連API
-		api.GET("/machines", machineHandler.GetAll)
-		api.GET("/machines/:id", machineHandler.GetByID)
-		api.POST("/machines", machineHandler.Create)
+		// 🔒 【認証必須エリア：管理画面専用】
+		// 💡 GETも含め、現在実装されている生のリソースAPIはすべてガードの中に幽閉します
+		adminProtected := api.Group("/admin")
+		adminProtected.Use(customMiddleware.AdminGuard()) // 自作の認証ミドルウェア
+		{
+			// 👥 管理者アカウント自体の管理 (CRUD)
+			adminProtected.GET("/admins", adminAuthHandler.GetAll)
+			adminProtected.GET("/admins/:id", adminAuthHandler.GetByID)
+			adminProtected.POST("/admins", adminAuthHandler.Create)
+			adminProtected.PUT("/admins", adminAuthHandler.Update)
+			adminProtected.DELETE("/admins", adminAuthHandler.Delete)
 
-		// 🏷️ キーワード関連API
-		api.GET("/keywords", keywordHandler.GetAll)
+			// 🎮 ゲーム管理
+			adminProtected.GET("/games", gameHandler.Search)
+			adminProtected.GET("/games/:id", gameHandler.GetByID)
+			adminProtected.POST("/games", gameHandler.Create)
 
-		// 🧬 ジャンル関連API
-		api.GET("/genres", genreHandler.GetAll)
+			// 💻 機種管理
+			adminProtected.GET("/machines", machineHandler.GetAll)
+			adminProtected.GET("/machines/:id", machineHandler.GetByID)
+			adminProtected.POST("/machines", machineHandler.Create)
 
-		// 🏭 メーカー関連API
-		api.GET("/manufacturers", manufacturerHandler.GetAll)
+			// 🏷️ キーワード管理
+			adminProtected.GET("/keywords", keywordHandler.GetAll)
+
+			// 🧬 ジャンル管理
+			adminProtected.GET("/genres", genreHandler.GetAll)
+
+			// 🏭 メーカー管理
+			adminProtected.GET("/manufacturers", manufacturerHandler.GetAll)
+		}
 	}
 
 	// 6. サーバー起動

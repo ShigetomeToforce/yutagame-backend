@@ -18,7 +18,6 @@ CREATE TABLE `manufacturers` (
 COMMENT='メーカー情報'
 COLLATE='utf8mb4_0900_ai_ci'
 ENGINE=InnoDB
-AUTO_INCREMENT=81
 ;
 
 CREATE TABLE `genres` (
@@ -35,7 +34,6 @@ CREATE TABLE `genres` (
 COMMENT='ジャンル情報'
 COLLATE='utf8mb4_0900_ai_ci'
 ENGINE=InnoDB
-AUTO_INCREMENT=14
 ;
 
 CREATE TABLE `keywords` (
@@ -54,7 +52,6 @@ CREATE TABLE `keywords` (
 COMMENT='キーワード情報'
 COLLATE='utf8mb4_0900_ai_ci'
 ENGINE=InnoDB
-AUTO_INCREMENT=266
 ;
 
 -- ==========================================
@@ -82,7 +79,6 @@ CREATE TABLE `machines` (
 COMMENT='機種'
 COLLATE='utf8mb4_0900_ai_ci'
 ENGINE=InnoDB
-AUTO_INCREMENT=36
 ;
 
 CREATE TABLE `games` (
@@ -117,7 +113,6 @@ CREATE TABLE `games` (
 COMMENT='ゲーム'
 COLLATE='utf8mb4_0900_ai_ci'
 ENGINE=InnoDB
-AUTO_INCREMENT=1011
 ;
 
 -- ==========================================
@@ -137,7 +132,6 @@ CREATE TABLE `admins` (
 )
 COLLATE='utf8mb4_0900_ai_ci'
 ENGINE=InnoDB
-AUTO_INCREMENT=4
 ;
 
 CREATE TABLE `users` (
