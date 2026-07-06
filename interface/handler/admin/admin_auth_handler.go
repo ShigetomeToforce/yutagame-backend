@@ -128,14 +128,14 @@ func (h *AdminAuthHandler) GetByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, adminData)
 }
 
-// GetAll 管理者一覧取得（共通関数を用いたスマート版）
+// GetAll 管理者一覧取得
 // @Summary      管理者一覧取得
-// @Description  パラメータがない場合は全件配列、pageパラメータがある場合は共通のページングオブジェクト(data)を返します。
 // @Tags         Admin-Management
 // @Produce      json
 // @Security     BearerAuth
 // @Param        page  query     int  false  "ページ番号 (指定するとページングモード)"
 // @Param        limit query     int  false  "表示件数 (10, 30, 50)"
+// @Param        q     query     string false "検索キーワード (名前またはメールアドレスの部分一致)"
 // @Success      200   {array}   model.Admin "page未指定時"
 // @Success      200   {object}  handler.PaginatedResponse[model.Admin] "page指定時"
 // @Router       /admin/admins [get]

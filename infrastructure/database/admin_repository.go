@@ -59,17 +59,13 @@ func (r *AdminRepository) FindAll(ctx context.Context) ([]model.Admin, error) {
 }
 
 // FindAllWithPagination 指定された件数（limit）と開始位置（offset）に応じて、管理者情報をID昇順で取得する
-func (r *AdminRepository) FindAllWithPagination(ctx context.Context, limit, offset int) ([]model.Admin, error) {
-	var admins []model.Admin
-	err := r.db.WithContext(ctx).Order("id asc").Limit(limit).Offset(offset).Find(&admins).Error
-	return admins, err
+func (r *AdminRepository) FindAllWithPagination(ctx context.Context, limit, offset int, whereQueries ...func(*gorm.DB) *gorm.DB) ([]model.Admin, error) {
+	return ExecuteFindWithPagination[model.Admin](ctx, r.db, limit, offset, "id asc", whereQueries...)
 }
 
-// CountAll ページングの総ページ数計算のため、登録されているすべての管理者アカウントの総件数を取得する
-func (r *AdminRepository) CountAll(ctx context.Context) (int64, error) {
-	var count int64
-	err := r.db.WithContext(ctx).Model(&model.Admin{}).Count(&count).Error
-	return count, err
+// CountAll ページングの総ページ数計算のため、条件に合致する管理者アカウントの総件数を取得する
+func (r *AdminRepository) CountAll(ctx context.Context, whereQueries ...func(*gorm.DB) *gorm.DB) (int64, error) {
+	return ExecuteCount[model.Admin](ctx, r.db, whereQueries...)
 }
 
 // =========================================================================

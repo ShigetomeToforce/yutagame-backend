@@ -11,6 +11,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 // AdminAuthUseCase 管理者の認証処理およびアカウント管理のビジネスロジックを担当するユースケース
@@ -114,19 +115,39 @@ func (u *AdminAuthUseCase) GetAllAdmins(ctx context.Context) ([]model.Admin, err
 	return u.adminRepo.FindAll(ctx)
 }
 
-// GetAdminsWithPagination 指定されたページと件数に基づいて、ページング適用済みの管理者一覧およびメタデータを取得する
-func (u *AdminAuthUseCase) GetAdminsWithPagination(ctx context.Context, page, limit int) ([]model.Admin, int64, int, error) {
-	// 1. 全件数の取得
-	totalCount, err := u.adminRepo.CountAll(ctx)
+// GetAdminsWithPagination 指定されたページ、件数、検索キーワードに基づいて、ページング・検索適用済みの管理者一覧を取得する
+func (u *AdminAuthUseCase) GetAdminsWithPagination(ctx context.Context, page, limit int, searchWord string) ([]model.Admin, int64, int, error) {
+	// 💡 1. 検索キーワードがある場合、GORMのWhere句を組み立てる（名前 OR メールアドレス の部分一致）
+	var whereQuery func(*gorm.DB) *gorm.DB
+	if searchWord != "" {
+		whereQuery = func(db *gorm.DB) *gorm.DB {
+			likeQuery := "%" + searchWord + "%"
+			return db.Where("name LIKE ? OR email LIKE ?", likeQuery, likeQuery)
+		}
+	}
+
+	// 2. 全件数（検索時はヒット件数）の取得
+	var totalCount int64
+	var err error
+	if whereQuery != nil {
+		totalCount, err = u.adminRepo.CountAll(ctx, whereQuery)
+	} else {
+		totalCount, err = u.adminRepo.CountAll(ctx)
+	}
 	if err != nil {
 		return nil, 0, 0, err
 	}
 
-	// 2. 💡 共通関数を使ってページングの計算とバリデーションを一撃で行う
+	// 3. 共通関数を使ってページングの計算
 	p := usecase.CalculatePagination(totalCount, page, limit)
 
-	// 3. 該当ページのデータ取得（計算された安全な Offset と Limit を適用）
-	admins, err := u.adminRepo.FindAllWithPagination(ctx, limit, p.Offset)
+	// 4. 該当ページのデータ取得
+	var admins []model.Admin
+	if whereQuery != nil {
+		admins, err = u.adminRepo.FindAllWithPagination(ctx, limit, p.Offset, whereQuery)
+	} else {
+		admins, err = u.adminRepo.FindAllWithPagination(ctx, limit, p.Offset)
+	}
 	if err != nil {
 		return nil, 0, 0, err
 	}
