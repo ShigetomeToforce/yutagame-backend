@@ -10,6 +10,6 @@ type Keyword struct {
 	Code      string    `gorm:"column:code;not null;unique" json:"code"`
 	Category  string    `gorm:"column:category;not null" json:"category"`
 	SortOrder int32     `gorm:"column:sort_order;not null" json:"sortOrder"`
-	CreatedAt time.Time `gorm:"column:created_at;not null" json:"createdAt"`
+	CreatedAt time.Time `gorm:"column:created_at;not null;<-:create" json:"createdAt"`
 	UpdatedAt time.Time `gorm:"column:updated_at;not null" json:"updatedAt"`
 }

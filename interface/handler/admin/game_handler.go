@@ -108,7 +108,7 @@ func (h *GameHandler) GetByID(c echo.Context) error {
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Param        request body   handler.GameCreateRequest true "ゲーム登録情報"
+// @Param        request body   GameCreateRequest true "ゲーム登録情報"
 // @Success      201  {object}  model.Game
 // @Router       /admin/games [post]
 func (h *GameHandler) Create(c echo.Context) error {

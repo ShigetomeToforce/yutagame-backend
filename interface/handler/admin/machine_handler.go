@@ -91,7 +91,7 @@ func (h *MachineHandler) GetByID(c echo.Context) error {
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Param        request body   handler.MachineCreateRequest true "機種登録情報"
+// @Param        request body   MachineCreateRequest true "機種登録情報"
 // @Success      201  {object}  model.Machine
 // @Router       /admin/machines [post]
 func (h *MachineHandler) Create(c echo.Context) error {

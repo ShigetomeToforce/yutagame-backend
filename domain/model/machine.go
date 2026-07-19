@@ -14,7 +14,7 @@ type Machine struct {
 	MachineType    string    `gorm:"column:machine_type;not null" json:"machineType"`
 	ReleaseDate    time.Time `gorm:"column:release_date;not null" json:"releaseDate"`
 	SortOrder      int32     `gorm:"column:sort_order;not null" json:"sortOrder"`
-	CreatedAt      time.Time `gorm:"column:created_at;not null" json:"createdAt"`
+	CreatedAt      time.Time `gorm:"column:created_at;not null;<-:create" json:"createdAt"`
 	UpdatedAt      time.Time `gorm:"column:updated_at;not null" json:"updatedAt"`
 
 	// 💡 依存関係の解消：GORMに「メーカー情報も連動してね」と教えるリレーション定義

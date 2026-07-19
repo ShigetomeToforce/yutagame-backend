@@ -9,6 +9,6 @@ type Genre struct {
 	Kana      string    `gorm:"column:kana;not null" json:"kana"`
 	Overview  string    `gorm:"column:overview;not null" json:"overview"`
 	Code      string    `gorm:"column:code;not null;unique" json:"code"`
-	CreatedAt time.Time `gorm:"column:created_at;not null" json:"createdAt"`
+	CreatedAt time.Time `gorm:"column:created_at;not null;<-:create" json:"createdAt"`
 	UpdatedAt time.Time `gorm:"column:updated_at;not null" json:"updatedAt"`
 }

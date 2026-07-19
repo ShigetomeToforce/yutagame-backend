@@ -9,6 +9,6 @@ type Admin struct {
 	Password  string    `gorm:"column:password;not null" json:"-"` // 💡 セキュリティのため、JSON変換時はパスワードを隠蔽します
 	Name      string    `gorm:"column:name;not null" json:"name"`
 	RoleType  string    `gorm:"column:role_type;not null" json:"roleType"`
-	CreatedAt time.Time `gorm:"column:created_at;not null" json:"createdAt"`
+	CreatedAt time.Time `gorm:"column:created_at;not null;<-:create" json:"createdAt"`
 	UpdatedAt time.Time `gorm:"column:updated_at;not null" json:"updatedAt"`
 }

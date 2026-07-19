@@ -106,8 +106,8 @@ func main() {
 			adminProtected.GET("/admins", adminAuthHandler.GetAll)
 			adminProtected.GET("/admins/:id", adminAuthHandler.GetByID)
 			adminProtected.POST("/admins", adminAuthHandler.Create)
-			adminProtected.PUT("/admins", adminAuthHandler.Update)
-			adminProtected.DELETE("/admins", adminAuthHandler.Delete)
+			adminProtected.PUT("/admins/:id", adminAuthHandler.Update)
+			adminProtected.DELETE("/admins/:id", adminAuthHandler.Delete)
 
 			// 🎮 ゲーム管理
 			adminProtected.GET("/games", gameHandler.Search)
@@ -124,6 +124,10 @@ func main() {
 
 			// 🧬 ジャンル管理
 			adminProtected.GET("/genres", genreHandler.GetAll)
+			adminProtected.GET("/genres/:id", genreHandler.GetByID)
+			adminProtected.POST("/genres", genreHandler.Create)
+			adminProtected.PUT("/genres/:id", genreHandler.Update)
+			adminProtected.DELETE("/genres/:id", genreHandler.Delete)
 
 			// 🏭 メーカー管理
 			adminProtected.GET("/manufacturers", manufacturerHandler.GetAll)

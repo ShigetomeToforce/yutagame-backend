@@ -22,7 +22,7 @@ type Game struct {
 	IsPlay          bool      `gorm:"column:is_play;not null" json:"isPlay"`
 	IsClear         bool      `gorm:"column:is_clear;not null" json:"isClear"`
 	IsFavourite     bool      `gorm:"column:is_favourite;not null" json:"isFavourite"`
-	CreatedAt       time.Time `gorm:"column:created_at;not null" json:"createdAt"`
+	CreatedAt       time.Time `gorm:"column:created_at;not null;<-:create" json:"createdAt"`
 	UpdatedAt       time.Time `gorm:"column:updated_at;not null" json:"updatedAt"`
 
 	// 💡 依存関係の解消：GORMの1対多（Belongs To）リレーション群
