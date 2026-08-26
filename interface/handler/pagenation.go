@@ -16,16 +16,16 @@ type PaginatedResponse[T any] struct {
 }
 
 // HandleListOrPagination 全件取得とページング取得（検索対応版）を自動判別してレスポンスを返す汎用関数
-func HandleListOrPagination[T any](
+func HandleListOrPagination[T any, F any](
 	c echo.Context,
 	getAllFn func(ctx context.Context) ([]T, error),
-	getPageFn func(ctx context.Context, page, limit int, search string) ([]T, int64, int, error), // 💡 引数に search を追加
+	getPageFn func(ctx context.Context, page, limit int, filter F) ([]T, int64, int, error),
+	buildFilterFn func(c echo.Context) F,
 ) error {
 	ctx := c.Request().Context()
-	pageStr := c.QueryParam("page")
-	searchWord := c.QueryParam("q") // 💡 URLの ?q=xxx を取得
 
 	// 1. page パラメータがない場合は、全データを配列で返す
+	pageStr := c.QueryParam("page")
 	if pageStr == "" {
 		data, err := getAllFn(ctx)
 		if err != nil {
@@ -45,8 +45,9 @@ func HandleListOrPagination[T any](
 		limit = 10
 	}
 
-	// 💡 UseCaseの関数に searchWord を流し込む
-	data, totalCount, totalPages, err := getPageFn(ctx, page, limit, searchWord)
+	filter := buildFilterFn(c)
+
+	data, totalCount, totalPages, err := getPageFn(ctx, page, limit, filter)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
 	}

@@ -8,18 +8,46 @@ import (
 	"gorm.io/gorm"
 )
 
+// =========================================================================
+// 構造体＆コンストラクタ
+// =========================================================================
+
+// MachineRepository 機種情報に関するデータベース操作を担当するリポジトリ
 type MachineRepository struct {
 	db *gorm.DB
 }
 
+// NewMachineRepository MachineRepositoryの新しいインスタンスを生成するコンストラクタ
 func NewMachineRepository(db *gorm.DB) *MachineRepository {
 	return &MachineRepository{db: db}
 }
 
-// FindAll は機種一覧を取得します
+// =========================================================================
+// C: Create (作成)
+// =========================================================================
+
+// Create 新しい機種情報をデータベースに登録する
+func (r *MachineRepository) Create(ctx context.Context, machine *model.Machine) error {
+	return r.db.WithContext(ctx).Create(machine).Error
+}
+
+// =========================================================================
+// R: Read (取得)
+// =========================================================================
+
+// FindByID 機種ID（主キー）を指定して、該当する機種情報を1件取得する
+func (r *MachineRepository) FindByID(ctx context.Context, id int64) (*model.Machine, error) {
+	var machine model.Machine
+	err := r.db.WithContext(ctx).Preload("Manufacturer").First(&machine, id).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &machine, err
+}
+
+// FindAll 登録されているすべての機種情報をID昇順で取得する（ページングなし）
 func (r *MachineRepository) FindAll(ctx context.Context) ([]model.Machine, error) {
 	var machines []model.Machine
-	// 💡 生SQLは一切なし！GORMが自動的に「SELECT * FROM machines ORDER BY sort_order ASC」を発行します
 	err := r.db.WithContext(ctx).Preload("Manufacturer").Order("sort_order asc, id asc").Find(&machines).Error
 	if err != nil {
 		return nil, err
@@ -27,33 +55,37 @@ func (r *MachineRepository) FindAll(ctx context.Context) ([]model.Machine, error
 	return machines, nil
 }
 
-// FindByID は指定されたIDの機種を1件取得します
-func (r *MachineRepository) FindByID(ctx context.Context, id int64) (*model.Machine, error) {
-	var machine model.Machine
-	err := r.db.WithContext(ctx).Preload("Manufacturer").First(&machine, id).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil // レコードが見つからない場合はnilを返す
+// FindAllWithPagination 指定された件数（limit）と開始位置（offset）に応じて、機種情報をID昇順で取得する
+func (r *MachineRepository) FindAllWithPagination(
+	ctx context.Context,
+	limit, offset int,
+	whereQueries ...func(*gorm.DB) *gorm.DB,
+) ([]model.Machine, error) {
+	modifier := func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Manufacturer")
 	}
-	if err != nil {
-		return nil, err
-	}
-	return &machine, nil
+	return ExecuteFindWithPagination[model.Machine](ctx, r.db, limit, offset, "id asc", modifier, whereQueries...)
 }
 
-// Create は新しい機種を登録します
-func (r *MachineRepository) Create(ctx context.Context, m *model.Machine) error {
-	// 💡 挿入処理もこれだけ。CreatedAt, UpdatedAtの初期化やLastInsertIdの取得もGORMが裏で自動でやります
-	return r.db.WithContext(ctx).Create(m).Error
+// CountAll ページングの総ページ数計算のため、条件に合致する機種情報の総件数を取得する
+func (r *MachineRepository) CountAll(ctx context.Context, whereQueries ...func(*gorm.DB) *gorm.DB) (int64, error) {
+	return ExecuteCount[model.Machine](ctx, r.db, whereQueries...)
 }
 
-// Update は既存の機種情報を更新します
+// =========================================================================
+// U: Update (更新)
+// =========================================================================
+
+// Update 既存の機種情報（名前、説明など）を更新する
 func (r *MachineRepository) Update(ctx context.Context, m *model.Machine) error {
-	// 💡 構造体のIDを基準に、全カラムを自動でUPDATEします
 	return r.db.WithContext(ctx).Save(m).Error
 }
 
-// Delete は機種を削除します
+// =========================================================================
+// D: Delete (削除)
+// =========================================================================
+
+// Delete 機種IDを指定して、該当する機種情報を物理削除する
 func (r *MachineRepository) Delete(ctx context.Context, id int64) error {
-	// 💡 IDを指定して削除
 	return r.db.WithContext(ctx).Delete(&model.Machine{}, id).Error
 }

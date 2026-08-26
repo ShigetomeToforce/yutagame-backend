@@ -10,18 +10,8 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// GenreHandler ジャンルに関連するHTTPリクエストの受付とレスポンスの制御を担当するハンドラー
-type GenreHandler struct {
-	genreUseCase *admin.GenreUseCase
-}
-
-// NewGenreHandler GenreHandler
-func NewGenreHandler(genreUseCase *admin.GenreUseCase) *GenreHandler {
-	return &GenreHandler{genreUseCase: genreUseCase}
-}
-
 // =========================================================================
-// 📦 Request/Response DTO (データ転送構造体)
+// 構造体＆コンストラクタ
 // =========================================================================
 
 // GenreSaveRequest ジャンルの新規登録および情報更新時に共通で利用するリクエストデータ
@@ -30,6 +20,16 @@ type GenreSaveRequest struct {
 	Kana     string `json:"kana"`
 	Overview string `json:"overview"`
 	Code     string `json:"code"`
+}
+
+// GenreHandler ジャンルに関連するHTTPリクエストの受付とレスポンスの制御を担当するハンドラー
+type GenreHandler struct {
+	genreUseCase *admin.GenreUseCase
+}
+
+// NewGenreHandler GenreHandlerの新しいインスタンスを生成するコンストラクタ
+func NewGenreHandler(genreUseCase *admin.GenreUseCase) *GenreHandler {
+	return &GenreHandler{genreUseCase: genreUseCase}
 }
 
 // =========================================================================
@@ -43,7 +43,7 @@ type GenreSaveRequest struct {
 // Create ジャンル新規登録
 // @Summary      ジャンル新規登録
 // @Description  新しいジャンルを作成します。
-// @Tags         Genre-Management
+// @Tags         Genres
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
@@ -79,7 +79,7 @@ func (h *GenreHandler) Create(c echo.Context) error {
 // GetByID ジャンル詳細取得
 // @Summary      ジャンル詳細取得
 // @Description  指定されたIDのジャンル情報を取得します。
-// @Tags         Genre-Management
+// @Tags         Genres
 // @Produce      json
 // @Security     BearerAuth
 // @Param        id   path      int  true  "ジャンルID"
@@ -90,18 +90,24 @@ func (h *GenreHandler) GetByID(c echo.Context) error {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	ctx := c.Request().Context()
 
-	genreData, err := h.genreUseCase.GetGenreByID(ctx, id)
-	if err != nil || genreData == nil {
+	genre, err := h.genreUseCase.GetGenreByID(ctx, id)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{
+			Message: err.Error(),
+		})
+	}
+	if genre == nil {
 		return c.JSON(http.StatusNotFound, handler.ErrorResponse{
 			Message: "指定されたIDのジャンル情報が見つかりませんでした。",
 		})
 	}
-	return c.JSON(http.StatusOK, genreData)
+
+	return c.JSON(http.StatusOK, genre)
 }
 
 // GetAll ジャンル一覧取得
 // @Summary      ジャンル一覧取得
-// @Tags         Genre-Management
+// @Tags         Genres
 // @Produce      json
 // @Security     BearerAuth
 // @Param        page  query     int  false  "ページ番号 (指定するとページングモード)"
@@ -116,6 +122,11 @@ func (h *GenreHandler) GetAll(c echo.Context) error {
 		c,
 		h.genreUseCase.GetAllGenres,
 		h.genreUseCase.GetGenresWithPagination,
+		func(c echo.Context) admin.GenreListFilter {
+			return admin.GenreListFilter{
+				SearchWord: c.QueryParam("q"),
+			}
+		},
 	)
 }
 
@@ -126,7 +137,7 @@ func (h *GenreHandler) GetAll(c echo.Context) error {
 // Update ジャンル情報更新
 // @Summary      ジャンル情報更新
 // @Description  指定されたIDのジャンルの情報を更新します。
-// @Tags         Genre-Management
+// @Tags         Genres
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
@@ -155,17 +166,17 @@ func (h *GenreHandler) Update(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
 	}
 
-	return c.JSON(http.StatusCreated, genre)
+	return c.JSON(http.StatusOK, genre)
 }
 
 // -------------------------------------------------------------------------
 // D: Delete (削除)
 // -------------------------------------------------------------------------
 
-// Delete 管理者削除
+// Delete ジャンル削除
 // @Summary      ジャンル削除
 // @Description  指定されたIDのジャンルを削除します。
-// @Tags         Genre-Management
+// @Tags         Genres
 // @Security     BearerAuth
 // @Param        id   path      int  true  "ジャンルID"
 // @Success      204  "No Content"

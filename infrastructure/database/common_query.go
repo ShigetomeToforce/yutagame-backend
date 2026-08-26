@@ -7,32 +7,46 @@ import (
 )
 
 // ExecuteCount 条件に合致する指定モデルの総件数を取得する汎用関数
-func ExecuteCount[T any](ctx context.Context, db *gorm.DB, whereQueries ...func(*gorm.DB) *gorm.DB) (int64, error) {
+func ExecuteCount[T any](
+	ctx context.Context,
+	db *gorm.DB,
+	whereQueries ...func(*gorm.DB) *gorm.DB,
+) (int64, error) {
 	var count int64
 	var model T
 
-	tx := db.WithContext(ctx).Model(&model)
-	for _, query := range whereQueries {
-		if query != nil {
-			tx = query(tx)
+	query := db.WithContext(ctx).Model(&model)
+	for _, where := range whereQueries {
+		if where != nil {
+			query = where(query)
 		}
 	}
 
-	err := tx.Count(&count).Error
+	err := query.Count(&count).Error
 	return count, err
 }
 
 // ExecuteFindWithPagination 条件・ページングを適用して、指定モデルの配列を取得する汎用関数
-func ExecuteFindWithPagination[T any](ctx context.Context, db *gorm.DB, limit, offset int, order string, whereQueries ...func(*gorm.DB) *gorm.DB) ([]T, error) {
-	var results []T
+func ExecuteFindWithPagination[T any](
+	ctx context.Context,
+	db *gorm.DB,
+	limit, offset int,
+	order string,
+	modifier func(*gorm.DB) *gorm.DB,
+	whereQueries ...func(*gorm.DB) *gorm.DB,
+) ([]T, error) {
+	var items []T
+	query := db.WithContext(ctx)
 
-	tx := db.WithContext(ctx)
-	for _, query := range whereQueries {
-		if query != nil {
-			tx = query(tx)
-		}
+	// Preloadなどの追加処理を適用
+	if modifier != nil {
+		query = modifier(query)
 	}
 
-	err := tx.Order(order).Limit(limit).Offset(offset).Find(&results).Error
-	return results, err
+	for _, where := range whereQueries {
+		query = where(query)
+	}
+
+	err := query.Limit(limit).Offset(offset).Order(order).Find(&items).Error
+	return items, err
 }

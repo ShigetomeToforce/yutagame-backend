@@ -8,7 +8,11 @@ import (
 	"gorm.io/gorm"
 )
 
-// AdminRepository 管理者データに関するデータベース操作を担当するリポジトリ
+// =========================================================================
+// 構造体＆コンストラクタ
+// =========================================================================
+
+// AdminRepository 管理者情報に関するデータベース操作を担当するリポジトリ
 type AdminRepository struct {
 	db *gorm.DB
 }
@@ -22,7 +26,7 @@ func NewAdminRepository(db *gorm.DB) *AdminRepository {
 // C: Create (作成)
 // =========================================================================
 
-// Create 新しい管理者アカウントをデータベースに登録する
+// Create 新しい管理者情報をデータベースに登録する
 func (r *AdminRepository) Create(ctx context.Context, admin *model.Admin) error {
 	return r.db.WithContext(ctx).Create(admin).Error
 }
@@ -36,7 +40,7 @@ func (r *AdminRepository) FindByID(ctx context.Context, id int64) (*model.Admin,
 	var admin model.Admin
 	err := r.db.WithContext(ctx).First(&admin, id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil // レコードが見つからない場合はエラーにせずnilを返す
+		return nil, nil
 	}
 	return &admin, err
 }
@@ -46,7 +50,7 @@ func (r *AdminRepository) FindByEmail(ctx context.Context, email string) (*model
 	var admin model.Admin
 	err := r.db.WithContext(ctx).Where("email = ?", email).First(&admin).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil // レコードが見つからない場合はエラーにせずnilを返す
+		return nil, nil
 	}
 	return &admin, err
 }
@@ -59,11 +63,15 @@ func (r *AdminRepository) FindAll(ctx context.Context) ([]model.Admin, error) {
 }
 
 // FindAllWithPagination 指定された件数（limit）と開始位置（offset）に応じて、管理者情報をID昇順で取得する
-func (r *AdminRepository) FindAllWithPagination(ctx context.Context, limit, offset int, whereQueries ...func(*gorm.DB) *gorm.DB) ([]model.Admin, error) {
-	return ExecuteFindWithPagination[model.Admin](ctx, r.db, limit, offset, "id asc", whereQueries...)
+func (r *AdminRepository) FindAllWithPagination(
+	ctx context.Context,
+	limit, offset int,
+	whereQueries ...func(*gorm.DB) *gorm.DB,
+) ([]model.Admin, error) {
+	return ExecuteFindWithPagination[model.Admin](ctx, r.db, limit, offset, "id asc", nil, whereQueries...)
 }
 
-// CountAll ページングの総ページ数計算のため、条件に合致する管理者アカウントの総件数を取得する
+// CountAll ページングの総ページ数計算のため、条件に合致する管理者情報の総件数を取得する
 func (r *AdminRepository) CountAll(ctx context.Context, whereQueries ...func(*gorm.DB) *gorm.DB) (int64, error) {
 	return ExecuteCount[model.Admin](ctx, r.db, whereQueries...)
 }
@@ -81,7 +89,7 @@ func (r *AdminRepository) Update(ctx context.Context, admin *model.Admin) error 
 // D: Delete (削除)
 // =========================================================================
 
-// Delete 管理者IDを指定して、該当する管理者アカウントを物理削除する
+// Delete 管理者IDを指定して、該当する管理者情報を物理削除する
 func (r *AdminRepository) Delete(ctx context.Context, id int64) error {
 	return r.db.WithContext(ctx).Delete(&model.Admin{}, id).Error
 }

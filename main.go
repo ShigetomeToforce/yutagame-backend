@@ -5,9 +5,9 @@ import (
 	"log"
 	"net/http"
 	"os"
-	adminUsecase "yutagame-backend/application/usecase/admin"
+	usecaseAdmin "yutagame-backend/application/usecase/admin"
 	"yutagame-backend/infrastructure/database"
-	adminHandler "yutagame-backend/interface/handler/admin"  // 💡 エイリアスを付けてインポート
+	handlerAdmin "yutagame-backend/interface/handler/admin"  // 💡 エイリアスを付けてインポート
 	customMiddleware "yutagame-backend/interface/middleware" // 💡 追加
 
 	"github.com/labstack/echo/v4"
@@ -57,23 +57,25 @@ func main() {
 	genreRepo := database.NewGenreRepository(db)
 	manufacturerRepo := database.NewManufacturerRepository(db)
 	adminRepo := database.NewAdminRepository(db)
-	_ = database.NewUserRepository(db) // 将来の一般ユーザー用（準備だけ）
+	userRepo := database.NewUserRepository(db)
 
 	// --- UseCase 層 ---
-	machineUseCase := adminUsecase.NewMachineUseCase(machineRepo)
-	gameUseCase := adminUsecase.NewGameUseCase(gameRepo)
-	keywordUseCase := adminUsecase.NewKeywordUseCase(keywordRepo)
-	genreUseCase := adminUsecase.NewGenreUseCase(genreRepo)
-	manufacturerUseCase := adminUsecase.NewManufacturerUseCase(manufacturerRepo)
-	adminAuthUseCase := adminUsecase.NewAdminAuthUseCase(adminRepo)
+	machineUseCase := usecaseAdmin.NewMachineUseCase(machineRepo)
+	gameUseCase := usecaseAdmin.NewGameUseCase(gameRepo)
+	keywordUseCase := usecaseAdmin.NewKeywordUseCase(keywordRepo)
+	genreUseCase := usecaseAdmin.NewGenreUseCase(genreRepo)
+	manufacturerUseCase := usecaseAdmin.NewManufacturerUseCase(manufacturerRepo)
+	adminUseCase := usecaseAdmin.NewAdminUseCase(adminRepo)
+	userUseCase := usecaseAdmin.NewUserUseCase(userRepo)
 
 	// --- Handler 層 ---
-	machineHandler := adminHandler.NewMachineHandler(machineUseCase)
-	gameHandler := adminHandler.NewGameHandler(gameUseCase)
-	keywordHandler := adminHandler.NewKeywordHandler(keywordUseCase)
-	genreHandler := adminHandler.NewGenreHandler(genreUseCase)
-	manufacturerHandler := adminHandler.NewManufacturerHandler(manufacturerUseCase)
-	adminAuthHandler := adminHandler.NewAdminAuthHandler(adminAuthUseCase)
+	machineHandler := handlerAdmin.NewMachineHandler(machineUseCase)
+	gameHandler := handlerAdmin.NewGameHandler(gameUseCase)
+	keywordHandler := handlerAdmin.NewKeywordHandler(keywordUseCase)
+	genreHandler := handlerAdmin.NewGenreHandler(genreUseCase)
+	manufacturerHandler := handlerAdmin.NewManufacturerHandler(manufacturerUseCase)
+	adminHandler := handlerAdmin.NewAdminHandler(adminUseCase)
+	userHandler := handlerAdmin.NewUserHandler(userUseCase)
 
 	// 4. Echo インスタンスの生成と共通設定
 	e := echo.New()
@@ -95,32 +97,40 @@ func main() {
 	api := e.Group("/api")
 	{
 		// 🔓 【完全公開エリア】ログインAPIのみ外に出す
-		api.POST("/admin/login", adminAuthHandler.Login)
+		api.POST("/admin/login", adminHandler.Login)
 
 		// 🔒 【認証必須エリア：管理画面専用】
 		// 💡 GETも含め、現在実装されている生のリソースAPIはすべてガードの中に幽閉します
 		adminProtected := api.Group("/admin")
 		adminProtected.Use(customMiddleware.AdminGuard()) // 自作の認証ミドルウェア
 		{
-			// 👥 管理者アカウント自体の管理 (CRUD)
-			adminProtected.GET("/admins", adminAuthHandler.GetAll)
-			adminProtected.GET("/admins/:id", adminAuthHandler.GetByID)
-			adminProtected.POST("/admins", adminAuthHandler.Create)
-			adminProtected.PUT("/admins/:id", adminAuthHandler.Update)
-			adminProtected.DELETE("/admins/:id", adminAuthHandler.Delete)
+			// 👥 管理者アカウント管理
+			adminProtected.GET("/admins", adminHandler.GetAll)
+			adminProtected.GET("/admins/:id", adminHandler.GetByID)
+			adminProtected.POST("/admins", adminHandler.Create)
+			adminProtected.PUT("/admins/:id", adminHandler.Update)
+			adminProtected.DELETE("/admins/:id", adminHandler.Delete)
 
 			// 🎮 ゲーム管理
-			adminProtected.GET("/games", gameHandler.Search)
+			adminProtected.GET("/games", gameHandler.GetAll)
 			adminProtected.GET("/games/:id", gameHandler.GetByID)
 			adminProtected.POST("/games", gameHandler.Create)
+			adminProtected.PUT("/games/:id", gameHandler.Update)
+			adminProtected.DELETE("/games/:id", gameHandler.Delete)
 
 			// 💻 機種管理
 			adminProtected.GET("/machines", machineHandler.GetAll)
 			adminProtected.GET("/machines/:id", machineHandler.GetByID)
 			adminProtected.POST("/machines", machineHandler.Create)
+			adminProtected.PUT("/machines/:id", machineHandler.Update)
+			adminProtected.DELETE("/machines/:id", machineHandler.Delete)
 
 			// 🏷️ キーワード管理
 			adminProtected.GET("/keywords", keywordHandler.GetAll)
+			adminProtected.GET("/keywords/:id", keywordHandler.GetByID)
+			adminProtected.POST("/keywords", keywordHandler.Create)
+			adminProtected.PUT("/keywords/:id", keywordHandler.Update)
+			adminProtected.DELETE("/keywords/:id", keywordHandler.Delete)
 
 			// 🧬 ジャンル管理
 			adminProtected.GET("/genres", genreHandler.GetAll)
@@ -131,6 +141,18 @@ func main() {
 
 			// 🏭 メーカー管理
 			adminProtected.GET("/manufacturers", manufacturerHandler.GetAll)
+			adminProtected.GET("/manufacturers/:id", manufacturerHandler.GetByID)
+			adminProtected.POST("/manufacturers", manufacturerHandler.Create)
+			adminProtected.PUT("/manufacturers/:id", manufacturerHandler.Update)
+			adminProtected.DELETE("/manufacturers/:id", manufacturerHandler.Delete)
+
+			// 🔓 ユーザー管理
+			adminProtected.GET("/users", userHandler.GetAll)
+			adminProtected.GET("/users/:id", userHandler.GetByID)
+			adminProtected.POST("/users", userHandler.Create)
+			adminProtected.PUT("/users/:id", userHandler.Update)
+			adminProtected.DELETE("/users/:id", userHandler.Delete)
+
 		}
 	}
 

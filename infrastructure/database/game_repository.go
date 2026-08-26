@@ -8,54 +8,34 @@ import (
 	"gorm.io/gorm"
 )
 
+// =========================================================================
+// 構造体＆コンストラクタ
+// =========================================================================
+
+// GameRepository ゲーム情報に関するデータベース操作を担当するリポジトリ
 type GameRepository struct {
 	db *gorm.DB
 }
 
+// NewGameRepository GameRepositoryの新しいインスタンスを生成するコンストラクタ
 func NewGameRepository(db *gorm.DB) *GameRepository {
 	return &GameRepository{db: db}
 }
 
-// FindAll は条件に応じてゲーム一覧を取得します（絞り込み ＆ キーワード同時取得対応）
-func (r *GameRepository) FindAll(ctx context.Context, machineID int64, manufacturerID int64, keywordID int64) ([]model.Game, error) {
-	var games []model.Game
+// =========================================================================
+// C: Create (作成)
+// =========================================================================
 
-	// 💡 Preload("Keywords") と書くだけで、GORMが中間テーブルを自動JOINして
-	// 構造体の中の Keywords スライスにデータを全自動で詰め込んでくれます！
-	// 💡 Preload を追加：Keywords だけでなく、機種・ジャンル・メーカーも全部一緒に読み込む！
-	tx := r.db.WithContext(ctx).
-		Preload("Manufacturer").
-		Preload("Machine").
-		Preload("Genre").
-		Preload("Keywords").
-		Order("release_date asc")
-
-	// 機種IDによる絞り込み
-	if machineID > 0 {
-		tx = tx.Where("machine_id = ?", machineID)
-	}
-
-	// メーカーIDによる絞り込み
-	if manufacturerID > 0 {
-		tx = tx.Where("manufacturer_id = ?", manufacturerID)
-	}
-
-	// 💡 中間テーブル化の恩恵：特定のキーワードIDでの絞り込みも爆速かつスマートに実現可能
-	if keywordID > 0 {
-		// game_keywords 中間テーブルに存在する game_id を安全にサブクエリで絞り込みます
-		tx = tx.Where("id IN (SELECT game_id FROM game_keywords WHERE keyword_id = ?)", keywordID)
-	}
-
-	// クエリ実行
-	err := tx.Find(&games).Error
-	if err != nil {
-		return nil, err
-	}
-
-	return games, nil
+// Create 新しいゲーム情報をデータベースに登録する
+func (r *GameRepository) Create(ctx context.Context, g *model.Game) error {
+	return r.db.WithContext(ctx).Create(g).Error
 }
 
-// FindByID は指定されたIDのゲームを1件取得します（詳細画面用）
+// =========================================================================
+// R: Read (取得)
+// =========================================================================
+
+// FindByID ゲームID（主キー）を指定して、該当するゲーム情報を1件取得する
 func (r *GameRepository) FindByID(ctx context.Context, id int64) (*model.Game, error) {
 	var game model.Game
 	err := r.db.WithContext(ctx).
@@ -64,27 +44,87 @@ func (r *GameRepository) FindByID(ctx context.Context, id int64) (*model.Game, e
 		Preload("Genre").
 		Preload("Keywords").
 		First(&game, id).Error
-
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}
+	return &game, err
+}
+
+// FindAll 登録されているすべてのゲーム情報をID昇順で取得する（ページングなし）
+func (r *GameRepository) FindAll(ctx context.Context) ([]model.Game, error) {
+	var games []model.Game
+	query := r.db.WithContext(ctx).
+		Preload("Manufacturer").
+		Preload("Machine").
+		Preload("Genre").
+		Preload("Keywords").
+		Order("id asc")
+	err := query.Find(&games).Error
 	if err != nil {
 		return nil, err
 	}
-	return &game, nil
+	return games, nil
 }
 
-// Create は新しいゲームを登録します（多対多の紐付けもGORMが自動処理）
-func (r *GameRepository) Create(ctx context.Context, g *model.Game) error {
-	return r.db.WithContext(ctx).Create(g).Error
+// FindAllWithPagination 指定された件数（limit）と開始位置（offset）に応じて、ゲーム情報を発売日昇順で取得する
+func (r *GameRepository) FindAllWithPagination(
+	ctx context.Context,
+	limit, offset int,
+	whereQueries ...func(*gorm.DB) *gorm.DB,
+) ([]model.Game, error) {
+	modifier := func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Manufacturer").
+			Preload("Machine").
+			Preload("Genre").
+			Preload("Keywords")
+	}
+	return ExecuteFindWithPagination[model.Game](
+		ctx, r.db, limit, offset, "release_date asc", modifier, whereQueries...)
 }
+
+// CountAll ページングの総ページ数計算のため、条件に合致する機種情報の総件数を取得する
+func (r *GameRepository) CountAll(ctx context.Context, whereQueries ...func(*gorm.DB) *gorm.DB) (int64, error) {
+	return ExecuteCount[model.Game](ctx, r.db, whereQueries...)
+}
+
+// =========================================================================
+// U: Update (更新)
+// =========================================================================
 
 // Update は既存のゲーム情報を更新します
 func (r *GameRepository) Update(ctx context.Context, g *model.Game) error {
 	return r.db.WithContext(ctx).Save(g).Error
 }
 
-// Delete はゲームを削除します（中間テーブルのレコードはDBのON DELETE CASCADEにより自動連動削除されます）
+// =========================================================================
+// D: Delete (削除)
+// =========================================================================
+
+// Delete はゲームIDを指定して、該当するゲーム情報を物理削除する。
+// データベース側の ON DELETE CASCADE 設定により、中間テーブル（game_keywords）の紐付けデータもMySQLが自動で連動削除
 func (r *GameRepository) Delete(ctx context.Context, id int64) error {
 	return r.db.WithContext(ctx).Delete(&model.Game{}, id).Error
+}
+
+// =========================================================================
+// O: Other (その他)
+// =========================================================================
+
+// ゲーム情報とキーワード情報の中間テーブルを更新
+func (r *GameRepository) ReplaceKeywords(ctx context.Context, gameID int64, keywordIDs []int64) error {
+	var keywords []model.Keyword
+	if len(keywordIDs) == 0 {
+		return r.db.WithContext(ctx).Model(&model.Game{ID: gameID}).Association("Keywords").Clear()
+	}
+
+	if err := r.db.WithContext(ctx).
+		Where("id IN ?", keywordIDs).
+		Find(&keywords).Error; err != nil {
+		return err
+	}
+
+	return r.db.WithContext(ctx).
+		Model(&model.Game{ID: gameID}).
+		Association("Keywords").
+		Replace(keywords)
 }

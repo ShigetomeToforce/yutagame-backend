@@ -3,6 +3,7 @@ package admin
 import (
 	"net/http"
 	"strconv"
+	"time"
 	"yutagame-backend/application/usecase/admin"
 	"yutagame-backend/interface/handler"
 
@@ -11,15 +12,12 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type MachineHandler struct {
-	machineUseCase *admin.MachineUseCase
-}
+// =========================================================================
+// 構造体＆コンストラクタ
+// =========================================================================
 
-func NewMachineHandler(machineUseCase *admin.MachineUseCase) *MachineHandler {
-	return &MachineHandler{machineUseCase: machineUseCase}
-}
-
-type MachineCreateRequest struct {
+// MachineSaveRequest 機種情報保存時にクライアントから送信されるJSONリクエスト
+type MachineSaveRequest struct {
 	Name           string `json:"name"`
 	Kana           string `json:"kana"`
 	Overview       string `json:"overview"`
@@ -31,24 +29,73 @@ type MachineCreateRequest struct {
 	SortOrder      int32  `json:"sortOrder"`
 }
 
-// GetAll 機種一覧取得
-// @Summary      機種一覧取得
-// @Description  登録されているすべてのハードウェア（機種）マスタを取得します。
+// MachineHandler 機種に関連するHTTPリクエストの受付とレスポンスの制御を担当するハンドラー
+type MachineHandler struct {
+	machineUseCase *admin.MachineUseCase
+}
+
+// NewMachineHandler MachineHandlerの新しいインスタンスを生成するコンストラクタ
+func NewMachineHandler(machineUseCase *admin.MachineUseCase) *MachineHandler {
+	return &MachineHandler{machineUseCase: machineUseCase}
+}
+
+// =========================================================================
+// 🛠️ Machine Management CRUD (ゲーム管理エンドポイント) - ガードあり
+// =========================================================================
+
+// -------------------------------------------------------------------------
+// C: Create (作成)
+// -------------------------------------------------------------------------
+
+// Create 機種新規登録
+// @Summary      機種新規登録
+// @Description  新しい機種情報をデータベースに登録します。
 // @Tags         Machines
+// @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Success      200  {array}  model.Machine
-// @Router       /admin/machines [get]
-func (h *MachineHandler) GetAll(c echo.Context) error {
-	ctx := c.Request().Context()
-	machines, err := h.machineUseCase.GetAllMachines(ctx)
+// @Param        request body   MachineSaveRequest true "機種登録情報"
+// @Success      201  {object}  model.Machine
+// @Router       /admin/machines [post]
+func (h *MachineHandler) Create(c echo.Context) error {
+	var req MachineSaveRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{
+			Message: err.Error(),
+		})
+	}
+
+	releaseDate, err := time.Parse("2006-01-02", req.ReleaseDate)
 	if err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{
+			Message: "releaseDate の形式が不正です。YYYY-MM-DD を指定してください。",
+		})
+	}
+
+	machine := model.Machine{
+		Name:           req.Name,
+		Kana:           req.Kana,
+		Overview:       req.Overview,
+		Code:           req.Code,
+		Abbreviation:   req.Abbreviation,
+		ManufacturerID: req.ManufacturerID,
+		ReleaseDate:    releaseDate,
+		SortOrder:      req.SortOrder,
+	}
+
+	ctx := c.Request().Context()
+	if err := h.machineUseCase.CreateMachine(ctx, &machine); err != nil {
 		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{
 			Message: err.Error(),
 		})
 	}
-	return c.JSON(http.StatusOK, machines)
+
+	return c.JSON(http.StatusCreated, machine)
 }
+
+// -------------------------------------------------------------------------
+// R: Read (取得)
+// -------------------------------------------------------------------------
 
 // GetByID 機種詳細取得
 // @Summary      機種詳細取得
@@ -60,15 +107,9 @@ func (h *MachineHandler) GetAll(c echo.Context) error {
 // @Success      200  {object}  model.Machine
 // @Router       /admin/machines/{id} [get]
 func (h *MachineHandler) GetByID(c echo.Context) error {
-	idStr := c.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{
-			Message: "不正なID形式です。整数値を指定してください。",
-		})
-	}
-
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	ctx := c.Request().Context()
+
 	machine, err := h.machineUseCase.GetMachineByID(ctx, id)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{
@@ -84,30 +125,105 @@ func (h *MachineHandler) GetByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, machine)
 }
 
-// Create 機種新規登録
-// @Summary      機種新規登録
-// @Description  新しいハードウェア（機種）マスタを登録します。
+// GetAll 機種一覧取得
+// @Summary      機種一覧取得
+// @Description  登録されているすべてのハードウェア（機種）マスタを取得します。
+// @Tags         Machines
+// @Produce      json
+// @Security     BearerAuth
+// @Param        page  			 query   int  	false "ページ番号 (指定するとページングモード)"
+// @Param        limit 			 query   int  	false "表示件数 (10, 30, 50)"
+// @Param        q     			 query   string false "自由入力のテキスト検索（ゲーム名）"
+// @Param        manufacturerIDs query   []int  false "メーカーIDの複数指定"
+// @Success      200  {array}  model.Machine "page未指定時"
+// @Success      200   {object}  handler.PaginatedResponse[model.Machine] "page指定時"
+// @Router       /admin/machines [get]
+func (h *MachineHandler) GetAll(c echo.Context) error {
+	// 💡 共通のジェネリクス関数に全件・ページングの各ユースケース関数を渡して処理を委ねる
+	return handler.HandleListOrPagination(
+		c,
+		h.machineUseCase.GetAllMachines,
+		h.machineUseCase.GetMachinesWithPagination,
+		func(c echo.Context) admin.MachineListFilter {
+			return admin.MachineListFilter{
+				SearchWord:      c.QueryParam("q"),
+				ManufacturerIDs: handler.ParseInt64Array(c, "manufacturerIDs"),
+			}
+		},
+	)
+}
+
+// -------------------------------------------------------------------------
+// U: Update (更新)
+// -------------------------------------------------------------------------
+
+// Update 機種情報更新
+// @Summary      機種情報更新
+// @Description  指定されたIDの機種情報更新します。
 // @Tags         Machines
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Param        request body   MachineCreateRequest true "機種登録情報"
-// @Success      201  {object}  model.Machine
-// @Router       /admin/machines [post]
-func (h *MachineHandler) Create(c echo.Context) error {
-	var m model.Machine
-	if err := c.Bind(&m); err != nil {
+// @Param        id      path   int  true  "機種ID"
+// @Param        request body   MachineSaveRequest true "ゲーム更新情報"
+// @Success      200  {object}  model.Machine
+// @Failure      400  {object}  handler.ErrorResponse "エラー"
+// @Router       /admin/machines/{id} [put]
+func (h *MachineHandler) Update(c echo.Context) error {
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	var req MachineSaveRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+
+	releaseDate, err := time.Parse("2006-01-02", req.ReleaseDate)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{
+			Message: "releaseDate の形式が不正です。YYYY-MM-DD を指定してください。",
+		})
+	}
+
+	machine := model.Machine{
+		ID:             id,
+		Name:           req.Name,
+		Kana:           req.Kana,
+		Overview:       req.Overview,
+		Code:           req.Code,
+		Abbreviation:   req.Abbreviation,
+		ManufacturerID: req.ManufacturerID,
+		ReleaseDate:    releaseDate,
+		SortOrder:      req.SortOrder,
+	}
+
+	ctx := c.Request().Context()
+	if err := h.machineUseCase.UpdateMachine(ctx, &machine); err != nil {
 		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{
 			Message: err.Error(),
 		})
 	}
 
-	ctx := c.Request().Context()
-	if err := h.machineUseCase.CreateMachine(ctx, &m); err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{
-			Message: err.Error(),
-		})
-	}
+	return c.JSON(http.StatusOK, machine)
+}
 
-	return c.JSON(http.StatusCreated, m)
+// -------------------------------------------------------------------------
+// D: Delete (削除)
+// -------------------------------------------------------------------------
+
+// Delete 機種情報削除
+// @Summary      機種情報削除
+// @Description  指定されたIDの機種情報を削除します。
+// @Tags         Machines
+// @Security     BearerAuth
+// @Param        id   path      int  true  "機種ID"
+// @Success      204  "No Content"
+// @Failure      400  {object}  handler.ErrorResponse "エラー"
+// @Router       /admin/machines/{id} [delete]
+func (h *MachineHandler) Delete(c echo.Context) error {
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	ctx := c.Request().Context()
+
+	if err := h.machineUseCase.DeleteMachine(ctx, id); err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+	return c.NoContent(http.StatusNoContent)
 }

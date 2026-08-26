@@ -9,6 +9,15 @@ import (
 	"gorm.io/gorm"
 )
 
+// =========================================================================
+// 構造体＆コンストラクタ
+// =========================================================================
+
+// GenreListFilter ジャンル検索用構造体
+type GenreListFilter struct {
+	SearchWord string
+}
+
 // GenreUseCase ジャンル管理のビジネスロジックを担当するユースケース
 type GenreUseCase struct {
 	genreRepo *database.GenreRepository
@@ -20,7 +29,7 @@ func NewGenreUseCase(genreRepo *database.GenreRepository) *GenreUseCase {
 }
 
 // =========================================================================
-// 🛠️ Genre Management CRUD (ジャンル管理ロジック) - ルーティングのガード内側で利用
+// Genre Management CRUD (ジャンル管理ロジック) - ルーティングのガード内側で利用
 // =========================================================================
 
 // -------------------------------------------------------------------------
@@ -46,12 +55,16 @@ func (u *GenreUseCase) GetAllGenres(ctx context.Context) ([]model.Genre, error) 
 	return u.genreRepo.FindAll(ctx)
 }
 
-// GetGenresWithPagination 指定されたページ、件数、検索キーワードに基づいて、ページング・検索適用済みのジャンル一覧を取得する
-func (u *GenreUseCase) GetGenresWithPagination(ctx context.Context, page, limit int, searchWord string) ([]model.Genre, int64, int, error) {
+// GetGenresWithPagination 指定されたページ、件数、検索キーワードに基づいて、ページング・検索適用済みのジャンル情報を取得する
+func (u *GenreUseCase) GetGenresWithPagination(
+	ctx context.Context,
+	page, limit int,
+	filter GenreListFilter,
+) ([]model.Genre, int64, int, error) {
 	var whereQuery func(*gorm.DB) *gorm.DB
-	if searchWord != "" {
+	if filter.SearchWord != "" {
 		whereQuery = func(db *gorm.DB) *gorm.DB {
-			likeQuery := "%" + searchWord + "%"
+			likeQuery := "%" + filter.SearchWord + "%"
 			return db.Where("name LIKE ? OR kana LIKE ?", likeQuery, likeQuery)
 		}
 	}
