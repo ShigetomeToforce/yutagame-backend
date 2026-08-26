@@ -104,7 +104,7 @@ func main() {
 		adminProtected := api.Group("/admin")
 		adminProtected.Use(customMiddleware.AdminGuard()) // 自作の認証ミドルウェア
 		{
-			// 👥 管理者アカウント管理
+			// 👥 管理アカウント管理
 			adminProtected.GET("/admins", adminHandler.GetAll)
 			adminProtected.GET("/admins/:id", adminHandler.GetByID)
 			adminProtected.POST("/admins", adminHandler.Create)

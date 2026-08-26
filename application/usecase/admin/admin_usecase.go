@@ -18,12 +18,12 @@ import (
 // 構造体＆コンストラクタ
 // =========================================================================
 
-// AdminListFilter 管理者検索用構造体
+// AdminListFilter 管理アカウント検索用構造体
 type AdminListFilter struct {
 	SearchWord string
 }
 
-// AdminUseCase 管理者の認証処理およびアカウント管理のビジネスロジックを担当するユースケース
+// AdminUseCase 管理アカウントの認証処理およびアカウント管理のビジネスロジックを担当するユースケース
 type AdminUseCase struct {
 	adminRepo *database.AdminRepository
 }
@@ -39,7 +39,7 @@ func NewAdminUseCase(adminRepo *database.AdminRepository) *AdminUseCase {
 
 // Login メールアドレスとパスワードを検証し、認証成功時にJWTトークンを発行する
 func (u *AdminUseCase) Login(ctx context.Context, email, password string) (string, error) {
-	// 1. メールアドレスから管理者アカウントを特定
+	// 1. メールアドレスから管理アカウントを特定
 	admin, err := u.adminRepo.FindByEmail(ctx, email)
 	if err != nil {
 		return "", err
@@ -72,14 +72,14 @@ func (u *AdminUseCase) Login(ctx context.Context, email, password string) (strin
 }
 
 // =========================================================================
-// 🛠️ Admin Management CRUD (管理者管理ロジック) - ルーティングのガード内側で利用
+// 🛠️ Admin Management CRUD (管理アカウントロジック) - ルーティングのガード内側で利用
 // =========================================================================
 
 // -------------------------------------------------------------------------
 // C: Create (作成)
 // -------------------------------------------------------------------------
 
-// CreateAdmin 重複チェックとパスワードのハッシュ化を行い、新しい管理者アカウントを作成する
+// CreateAdmin 重複チェックとパスワードのハッシュ化を行い、新しい管理アカウントを作成する
 func (u *AdminUseCase) CreateAdmin(ctx context.Context, name, email, password, roleType string) (*model.Admin, error) {
 	// 1. メールアドレスの重複チェック
 	existing, err := u.adminRepo.FindByEmail(ctx, email)
@@ -114,17 +114,17 @@ func (u *AdminUseCase) CreateAdmin(ctx context.Context, name, email, password, r
 // R: Read (取得)
 // -------------------------------------------------------------------------
 
-// GetAdminByID 管理者IDを指定して、該当する管理者情報を1件取得する
+// GetAdminByID 管理アカウントIDを指定して、該当する管理アカウント情報を1件取得する
 func (u *AdminUseCase) GetAdminByID(ctx context.Context, id int64) (*model.Admin, error) {
 	return u.adminRepo.FindByID(ctx, id)
 }
 
-// GetAllAdmins 登録されているすべての管理者情報を取得する（ページングなしの全件マスターデータ用）
+// GetAllAdmins 登録されているすべての管理アカウント情報を取得する（ページングなしの全件マスターデータ用）
 func (u *AdminUseCase) GetAllAdmins(ctx context.Context) ([]model.Admin, error) {
 	return u.adminRepo.FindAll(ctx)
 }
 
-// GetAdminsWithPagination 指定されたページ、件数、検索キーワードに基づいて、ページング・検索適用済みの管理者情報を取得する
+// GetAdminsWithPagination 指定されたページ、件数、検索キーワードに基づいて、ページング・検索適用済みの管理アカウント情報を取得する
 func (u *AdminUseCase) GetAdminsWithPagination(
 	ctx context.Context,
 	page, limit int,
@@ -149,7 +149,7 @@ func (u *AdminUseCase) GetAdminsWithPagination(
 // U: Update (更新)
 // -------------------------------------------------------------------------
 
-// UpdateAdmin 既存の管理者情報を更新する（パスワードが空文字の場合は変更なしとして扱う）
+// UpdateAdmin 既存の管理アカウント情報を更新する（パスワードが空文字の場合は変更なしとして扱う）
 func (u *AdminUseCase) UpdateAdmin(ctx context.Context, id int64, name, email, password, roleType string) (*model.Admin, error) {
 	// 1. 更新対象のアカウントが存在するか確認
 	admin, err := u.adminRepo.FindByID(ctx, id)
@@ -189,7 +189,7 @@ func (u *AdminUseCase) UpdateAdmin(ctx context.Context, id int64, name, email, p
 // D: Delete (削除)
 // -------------------------------------------------------------------------
 
-// DeleteAdmin 管理者IDを指定して、該当する管理者アカウントを削除する
+// DeleteAdmin 管理アカウントIDを指定して、該当する管理アカウントアカウントを削除する
 func (u *AdminUseCase) DeleteAdmin(ctx context.Context, id int64) error {
 	return u.adminRepo.Delete(ctx, id)
 }

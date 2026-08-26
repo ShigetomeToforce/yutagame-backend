@@ -2,7 +2,7 @@ SET NAMES utf8mb4;
 
 DELETE FROM `admins`;
 -- ==========================================
--- 初期管理者ユーザーのシードデータ
+-- 初期管理アカウントのシードデータ
 -- ==========================================
 
 INSERT INTO `admins` (
@@ -17,7 +17,7 @@ INSERT INTO `admins` (
     1, 
     'admin@example.com', 
     '$2a$10$SwIs8SXB.Ji8h7Y5EY3EnOPIKuDVlOpSab2rt2Rb7zcE6chDntE/6', 
-    '管理者ユーザー', 
+    'デフォルト管理者アカウント', 
     'ADMIN', 
     NOW(), 
     NOW()
