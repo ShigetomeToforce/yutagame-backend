@@ -80,7 +80,7 @@ func (r *UserRepository) CountAll(ctx context.Context, whereQueries ...func(*gor
 // U: Update (更新)
 // =========================================================================
 
-// Update 既存の管理アカウント情報（メール、パスワードなど）を更新する
+// Update 既存のAdminユーザー情報（メール、パスワードなど）を更新する
 func (r *UserRepository) Update(ctx context.Context, user *model.User) error {
 	return r.db.WithContext(ctx).Save(user).Error
 }

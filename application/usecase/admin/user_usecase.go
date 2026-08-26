@@ -31,7 +31,7 @@ func NewUserUseCase(userRepo *database.UserRepository) *UserUseCase {
 }
 
 // =========================================================================
-// 🛠️ User Management CRUD (管理アカウント管理ロジック) - ルーティングのガード内側で利用
+// 🛠️ User Management CRUD (Adminユーザー管理ロジック) - ルーティングのガード内側で利用
 // =========================================================================
 
 // -------------------------------------------------------------------------
@@ -72,7 +72,7 @@ func (u *UserUseCase) CreateUser(ctx context.Context, name, email, password stri
 // R: Read (取得)
 // -------------------------------------------------------------------------
 
-// GetUserByID 管理アカウントIDを指定して、該当するユーザー情報を1件取得する
+// GetUserByID AdminユーザーIDを指定して、該当するユーザー情報を1件取得する
 func (u *UserUseCase) GetUserByID(ctx context.Context, id int64) (*model.User, error) {
 	return u.userRepo.FindByID(ctx, id)
 }
@@ -107,7 +107,7 @@ func (u *UserUseCase) GetUsersWithPagination(
 // U: Update (更新)
 // -------------------------------------------------------------------------
 
-// UpdateUser 既存の管理アカウント情報を更新する（パスワードが空文字の場合は変更なしとして扱う）
+// UpdateUser 既存のAdminユーザー情報を更新する（パスワードが空文字の場合は変更なしとして扱う）
 func (u *UserUseCase) UpdateUser(ctx context.Context, id int64, name, email, password string) (*model.User, error) {
 	// 1. 更新対象のアカウントが存在するか確認
 	user, err := u.userRepo.FindByID(ctx, id)

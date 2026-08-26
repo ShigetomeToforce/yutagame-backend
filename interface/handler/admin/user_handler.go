@@ -31,7 +31,7 @@ func NewUserHandler(userUseCase *admin.UserUseCase) *UserHandler {
 }
 
 // =========================================================================
-// 🛠️ Admin Management CRUD (管理アカウント管理エンドポイント) - ガードあり
+// 🛠️ Admin Management CRUD (Adminユーザー管理エンドポイント) - ガードあり
 // =========================================================================
 
 // -------------------------------------------------------------------------
@@ -104,7 +104,7 @@ func (h *UserHandler) GetByID(c echo.Context) error {
 // @Security     BearerAuth
 // @Param        page  query     int  false  "ページ番号 (指定するとページングモード)"
 // @Param        limit query     int  false  "表示件数 (10, 30, 50)"
-// @Param        q     query     string false "自由入力のテキスト検索（管理アカウント名）"
+// @Param        q     query     string false "自由入力のテキスト検索（Adminユーザー名）"
 // @Success      200   {array}   model.User "page未指定時"
 // @Success      200   {object}  handler.PaginatedResponse[model.User] "page指定時"
 // @Router       /admin/users [get]
@@ -128,7 +128,7 @@ func (h *UserHandler) GetAll(c echo.Context) error {
 
 // Update ユーザー情報更新
 // @Summary      ユーザー情報更新
-// @Description  指定されたIDの管理アカウントの名前、メール、パスワードを更新します。
+// @Description  指定されたIDのAdminユーザーの名前、メール、パスワードを更新します。
 // @Tags         Users
 // @Accept       json
 // @Produce      json
@@ -162,7 +162,7 @@ func (h *UserHandler) Update(c echo.Context) error {
 // @Description  指定されたIDのユーザー情報を削除します。
 // @Tags         Users
 // @Security     BearerAuth
-// @Param        id   path      int  true  "管理アカウントID"
+// @Param        id   path      int  true  "AdminユーザーID"
 // @Success      204  "No Content"
 // @Failure      400  {object}  handler.ErrorResponse "エラー"
 // @Router       /admin/users/{id} [delete]

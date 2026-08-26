@@ -19,7 +19,7 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
-// AdminSaveRequest 管理アカウントの新規登録および情報更新時に共通で利用するリクエストデータ
+// AdminSaveRequest Adminユーザーの新規登録および情報更新時に共通で利用するリクエストデータ
 type AdminSaveRequest struct {
 	Name     string `json:"name"`
 	Email    string `json:"email"`
@@ -27,7 +27,7 @@ type AdminSaveRequest struct {
 	RoleType string `json:"roleType"`
 }
 
-// AdminHandler 管理アカウントに関連するHTTPリクエストの受付とレスポンスの制御を担当するハンドラー
+// AdminHandler Adminユーザーに関連するHTTPリクエストの受付とレスポンスの制御を担当するハンドラー
 type AdminHandler struct {
 	adminUseCase *admin.AdminUseCase
 }
@@ -41,8 +41,8 @@ func NewAdminHandler(adminUseCase *admin.AdminUseCase) *AdminHandler {
 // 🔑 Authentication (認証エンドポイント) - ガードなし
 // =========================================================================
 
-// Login 管理アカウントログイン
-// @Summary      管理アカウントログイン
+// Login Adminユーザーログイン
+// @Summary      Adminユーザーログイン
 // @Description  メールアドレスとパスワードでログインし、JWTトークンを発行します。
 // @Tags         Auth
 // @Accept       json
@@ -69,21 +69,21 @@ func (h *AdminHandler) Login(c echo.Context) error {
 }
 
 // =========================================================================
-// 🛠️ Admin Management CRUD (管理アカウント管理エンドポイント) - ガードあり
+// 🛠️ Admin Management CRUD (Adminユーザー管理エンドポイント) - ガードあり
 // =========================================================================
 
 // -------------------------------------------------------------------------
 // C: Create (作成)
 // -------------------------------------------------------------------------
 
-// Create 管理アカウント新規登録
-// @Summary      管理アカウント新規登録
-// @Description  新しい管理アカウントフアカウントを作成します。
+// Create Adminユーザー新規登録
+// @Summary      Adminユーザー新規登録
+// @Description  新しいAdminユーザーフアカウントを作成します。
 // @Tags         Admins
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Param        request body   AdminSaveRequest true "管理アカウント登録情報"
+// @Param        request body   AdminSaveRequest true "Adminユーザー登録情報"
 // @Success      201  {object}  model.Admin
 // @Failure      400  {object}  handler.ErrorResponse "バリデーション・重複エラー"
 // @Router       /admin/admins [post]
@@ -105,13 +105,13 @@ func (h *AdminHandler) Create(c echo.Context) error {
 // R: Read (取得)
 // -------------------------------------------------------------------------
 
-// GetByID 管理アカウント詳細取得
-// @Summary      管理アカウント詳細取得
-// @Description  指定されたIDの管理アカウント情報を取得します。
+// GetByID Adminユーザー詳細取得
+// @Summary      Adminユーザー詳細取得
+// @Description  指定されたIDのAdminユーザー情報を取得します。
 // @Tags         Admins
 // @Produce      json
 // @Security     BearerAuth
-// @Param        id   path      int  true  "管理アカウントID"
+// @Param        id   path      int  true  "AdminユーザーID"
 // @Success      200  {object}  model.Admin
 // @Failure      404  {object}  handler.ErrorResponse "未検出エラー"
 // @Router       /admin/admins/{id} [get]
@@ -127,22 +127,22 @@ func (h *AdminHandler) GetByID(c echo.Context) error {
 	}
 	if admin == nil {
 		return c.JSON(http.StatusNotFound, handler.ErrorResponse{
-			Message: "指定されたIDの管理アカウント情報が見つかりませんでした。",
+			Message: "指定されたIDのAdminユーザー情報が見つかりませんでした。",
 		})
 	}
 
 	return c.JSON(http.StatusOK, admin)
 }
 
-// GetAll 管理アカウント一覧取得
-// @Summary      管理アカウント一覧取得
-// @Description  条件に従い管理アカウント情報の一覧を取得します。
+// GetAll Adminユーザー一覧取得
+// @Summary      Adminユーザー一覧取得
+// @Description  条件に従いAdminユーザー情報の一覧を取得します。
 // @Tags         Admins
 // @Produce      json
 // @Security     BearerAuth
 // @Param        page  query     int  false  "ページ番号 (指定するとページングモード)"
 // @Param        limit query     int  false  "表示件数 (10, 30, 50)"
-// @Param        q     query     string false "自由入力のテキスト検索（管理アカウント名）"
+// @Param        q     query     string false "自由入力のテキスト検索（Adminユーザー名）"
 // @Success      200   {array}   model.Admin "page未指定時"
 // @Success      200   {object}  handler.PaginatedResponse[model.Admin] "page指定時"
 // @Router       /admin/admins [get]
@@ -164,15 +164,15 @@ func (h *AdminHandler) GetAll(c echo.Context) error {
 // U: Update (更新)
 // -------------------------------------------------------------------------
 
-// Update 管理アカウント情報更新
-// @Summary      管理アカウント情報更新
-// @Description  指定されたIDの管理アカウントの名前、メール、パスワード、権限を更新します。
+// Update Adminユーザー情報更新
+// @Summary      Adminユーザー情報更新
+// @Description  指定されたIDのAdminユーザーの名前、メール、パスワード、権限を更新します。
 // @Tags         Admins
 // @Accept       json
 // @Produce      json
 // @Security     BearerAuth
-// @Param        id      path   int  true  "管理アカウントID"
-// @Param        request body   AdminSaveRequest true "管理アカウント更新情報"
+// @Param        id      path   int  true  "AdminユーザーID"
+// @Param        request body   AdminSaveRequest true "Adminユーザー更新情報"
 // @Success      200  {object}  model.Admin
 // @Failure      400  {object}  handler.ErrorResponse "エラー"
 // @Router       /admin/admins/{id} [put]
@@ -195,12 +195,12 @@ func (h *AdminHandler) Update(c echo.Context) error {
 // D: Delete (削除)
 // -------------------------------------------------------------------------
 
-// Delete 管理アカウント削除
-// @Summary      管理アカウント削除
-// @Description  指定されたIDの管理アカウントアカウントを削除します。
+// Delete Adminユーザー削除
+// @Summary      Adminユーザー削除
+// @Description  指定されたIDのAdminユーザーアカウントを削除します。
 // @Tags         Admins
 // @Security     BearerAuth
-// @Param        id   path      int  true  "管理アカウントID"
+// @Param        id   path      int  true  "AdminユーザーID"
 // @Success      204  "No Content"
 // @Failure      400  {object}  handler.ErrorResponse "エラー"
 // @Router       /admin/admins/{id} [delete]
