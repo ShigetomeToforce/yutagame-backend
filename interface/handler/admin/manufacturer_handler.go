@@ -181,7 +181,7 @@ func (h *ManufacturerHandler) Update(c echo.Context) error {
 // @Param        id   path      int  true  "ジメーカID"
 // @Success      204  "No Content"
 // @Failure      400  {object}  handler.ErrorResponse "エラー"
-// @Router       /admin/genres/{id} [delete]
+// @Router       /admin/manufacturers/{id} [delete]
 func (h *ManufacturerHandler) Delete(c echo.Context) error {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	ctx := c.Request().Context()

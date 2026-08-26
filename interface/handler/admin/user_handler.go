@@ -99,7 +99,7 @@ func (h *UserHandler) GetByID(c echo.Context) error {
 // GetAll ユーザー一覧取得
 // @Summary      ユーザー一覧取得
 // @Description  条件に従いユーザー情報の一覧を取得します。
-// @Tags         Admins
+// @Tags         Users
 // @Produce      json
 // @Security     BearerAuth
 // @Param        page  query     int  false  "ページ番号 (指定するとページングモード)"
@@ -160,7 +160,7 @@ func (h *UserHandler) Update(c echo.Context) error {
 // Delete ユーザー削除
 // @Summary      ユーザー削除
 // @Description  指定されたIDのユーザー情報を削除します。
-// @Tags         Admins
+// @Tags         Users
 // @Security     BearerAuth
 // @Param        id   path      int  true  "管理者ID"
 // @Success      204  "No Content"
