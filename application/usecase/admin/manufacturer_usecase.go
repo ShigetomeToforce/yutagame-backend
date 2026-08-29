@@ -102,6 +102,11 @@ func (u *ManufacturerUseCase) UpdateManufacturer(ctx context.Context, g *model.M
 	return u.manufacturerRepo.Update(ctx, g)
 }
 
+// SetManufacturerImageKey はメーカー画像キーを更新する
+func (u *ManufacturerUseCase) SetManufacturerImageKey(ctx context.Context, id int64, imageKey *string) error {
+	return u.manufacturerRepo.UpdateImageKey(ctx, id, imageKey)
+}
+
 // ----------------------------------------------------------------------------
 // D: Delete (削除)
 // ----------------------------------------------------------------------------

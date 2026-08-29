@@ -168,6 +168,11 @@ func (u *GameUseCase) UpdateGame(ctx context.Context, g *model.Game, keywordIDs 
 	return u.gameRepo.ReplaceKeywords(ctx, g.ID, keywordIDs)
 }
 
+// SetGameImageKey ゲーム画像キーを更新する
+func (u *GameUseCase) SetGameImageKey(ctx context.Context, id int64, imageKey *string) error {
+	return u.gameRepo.UpdateImageKey(ctx, id, imageKey)
+}
+
 // -------------------------------------------------------------------------
 // D: Delete (削除)
 // -------------------------------------------------------------------------

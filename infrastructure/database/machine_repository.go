@@ -91,6 +91,14 @@ func (r *MachineRepository) Update(ctx context.Context, m *model.Machine) error 
 	return r.db.WithContext(ctx).Save(m).Error
 }
 
+// UpdateImageKey は機種画像キーのみを更新する
+func (r *MachineRepository) UpdateImageKey(ctx context.Context, id int64, imageKey *string) error {
+	return r.db.WithContext(ctx).
+		Model(&model.Machine{}).
+		Where("id = ?", id).
+		Update("image_key", imageKey).Error
+}
+
 // =========================================================================
 // D: Delete (削除)
 // =========================================================================

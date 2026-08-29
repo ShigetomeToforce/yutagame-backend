@@ -112,6 +112,11 @@ func (u *MachineUseCase) UpdateMachine(ctx context.Context, m *model.Machine) er
 	return u.machineRepo.Update(ctx, m)
 }
 
+// SetMachineImageKey は機種画像キーを更新する
+func (u *MachineUseCase) SetMachineImageKey(ctx context.Context, id int64, imageKey *string) error {
+	return u.machineRepo.UpdateImageKey(ctx, id, imageKey)
+}
+
 // -------------------------------------------------------------------------
 // D: Delete (削除)
 // -------------------------------------------------------------------------

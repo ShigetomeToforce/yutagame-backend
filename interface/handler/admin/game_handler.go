@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -266,6 +267,15 @@ func (h *GameHandler) Update(c echo.Context) error {
 	}
 
 	ctx := c.Request().Context()
+	existing, err := h.gameUseCase.GetGameByID(ctx, id)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+	if existing == nil {
+		return c.JSON(http.StatusNotFound, handler.ErrorResponse{Message: "指定されたゲームが見つかりませんでした。"})
+	}
+	game.ImageKey = existing.ImageKey
+
 	if err := h.gameUseCase.UpdateGame(ctx, &game, req.KeywordIDs); err != nil {
 		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{
 			Message: err.Error(),
@@ -295,5 +305,68 @@ func (h *GameHandler) Delete(c echo.Context) error {
 	if err := h.gameUseCase.DeleteGame(ctx, id); err != nil {
 		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
 	}
+	return c.NoContent(http.StatusNoContent)
+}
+
+// UploadImage ゲーム画像アップロード
+func (h *GameHandler) UploadImage(c echo.Context) error {
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	ctx := c.Request().Context()
+
+	game, err := h.gameUseCase.GetGameByID(ctx, id)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+	if game == nil {
+		return c.JSON(http.StatusNotFound, handler.ErrorResponse{Message: "指定されたゲームが見つかりませんでした。"})
+	}
+
+	fileHeader, err := c.FormFile("image")
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: "画像ファイルを選択してください。"})
+	}
+
+	imageKey, err := saveUploadedImage(fileHeader, "games", game.Code)
+	if err != nil {
+		status := http.StatusBadRequest
+		if !errors.Is(err, errImageRequired) && !errors.Is(err, errImageTooLarge) && !errors.Is(err, errImageTypeDenied) {
+			status = http.StatusInternalServerError
+		}
+		return c.JSON(status, handler.ErrorResponse{Message: err.Error()})
+	}
+
+	if err := h.gameUseCase.SetGameImageKey(ctx, id, &imageKey); err != nil {
+		_ = deleteStoredImage(imageKey)
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+
+	if game.ImageKey != nil {
+		_ = deleteStoredImage(*game.ImageKey)
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"imageKey": imageKey})
+}
+
+// DeleteImage ゲーム画像削除
+func (h *GameHandler) DeleteImage(c echo.Context) error {
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	ctx := c.Request().Context()
+
+	game, err := h.gameUseCase.GetGameByID(ctx, id)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+	if game == nil {
+		return c.JSON(http.StatusNotFound, handler.ErrorResponse{Message: "指定されたゲームが見つかりませんでした。"})
+	}
+
+	if err := h.gameUseCase.SetGameImageKey(ctx, id, nil); err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+
+	if game.ImageKey != nil {
+		_ = deleteStoredImage(*game.ImageKey)
+	}
+
 	return c.NoContent(http.StatusNoContent)
 }

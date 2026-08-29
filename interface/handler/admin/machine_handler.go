@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -227,6 +228,15 @@ func (h *MachineHandler) Update(c echo.Context) error {
 	}
 
 	ctx := c.Request().Context()
+	existing, err := h.machineUseCase.GetMachineByID(ctx, id)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+	if existing == nil {
+		return c.JSON(http.StatusNotFound, handler.ErrorResponse{Message: "指定された機種が見つかりませんでした。"})
+	}
+	machine.ImageKey = existing.ImageKey
+
 	if err := h.machineUseCase.UpdateMachine(ctx, &machine); err != nil {
 		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{
 			Message: err.Error(),
@@ -256,5 +266,68 @@ func (h *MachineHandler) Delete(c echo.Context) error {
 	if err := h.machineUseCase.DeleteMachine(ctx, id); err != nil {
 		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
 	}
+	return c.NoContent(http.StatusNoContent)
+}
+
+// UploadImage 機種画像アップロード
+func (h *MachineHandler) UploadImage(c echo.Context) error {
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	ctx := c.Request().Context()
+
+	machine, err := h.machineUseCase.GetMachineByID(ctx, id)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+	if machine == nil {
+		return c.JSON(http.StatusNotFound, handler.ErrorResponse{Message: "指定された機種が見つかりませんでした。"})
+	}
+
+	fileHeader, err := c.FormFile("image")
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: "画像ファイルを選択してください。"})
+	}
+
+	imageKey, err := saveUploadedImage(fileHeader, "machines", machine.Code)
+	if err != nil {
+		status := http.StatusBadRequest
+		if !errors.Is(err, errImageRequired) && !errors.Is(err, errImageTooLarge) && !errors.Is(err, errImageTypeDenied) {
+			status = http.StatusInternalServerError
+		}
+		return c.JSON(status, handler.ErrorResponse{Message: err.Error()})
+	}
+
+	if err := h.machineUseCase.SetMachineImageKey(ctx, id, &imageKey); err != nil {
+		_ = deleteStoredImage(imageKey)
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+
+	if machine.ImageKey != nil {
+		_ = deleteStoredImage(*machine.ImageKey)
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"imageKey": imageKey})
+}
+
+// DeleteImage 機種画像削除
+func (h *MachineHandler) DeleteImage(c echo.Context) error {
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	ctx := c.Request().Context()
+
+	machine, err := h.machineUseCase.GetMachineByID(ctx, id)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+	if machine == nil {
+		return c.JSON(http.StatusNotFound, handler.ErrorResponse{Message: "指定された機種が見つかりませんでした。"})
+	}
+
+	if err := h.machineUseCase.SetMachineImageKey(ctx, id, nil); err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+
+	if machine.ImageKey != nil {
+		_ = deleteStoredImage(*machine.ImageKey)
+	}
+
 	return c.NoContent(http.StatusNoContent)
 }

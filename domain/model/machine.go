@@ -9,6 +9,7 @@ type Machine struct {
 	Kana           string    `gorm:"column:kana;not null" json:"kana"`
 	Overview       string    `gorm:"column:overview;not null" json:"overview"`
 	Code           string    `gorm:"column:code;not null;unique" json:"code"`
+	ImageKey       *string   `gorm:"column:image_key" json:"imageKey"`
 	Abbreviation   string    `gorm:"column:abbreviation;not null" json:"abbreviation"`
 	ManufacturerID int64     `gorm:"column:manufacturer_id;not null" json:"manufacturerId"`
 	MachineType    string    `gorm:"column:machine_type;not null" json:"machineType"`

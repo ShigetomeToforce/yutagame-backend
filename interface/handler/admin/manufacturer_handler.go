@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -192,6 +193,15 @@ func (h *ManufacturerHandler) Update(c echo.Context) error {
 	}
 
 	ctx := c.Request().Context()
+	existing, err := h.manufacturerUseCase.GetManufacturerByID(ctx, id)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+	if existing == nil {
+		return c.JSON(http.StatusNotFound, handler.ErrorResponse{Message: "指定されたメーカーが見つかりませんでした。"})
+	}
+	manufacturer.ImageKey = existing.ImageKey
+
 	if err := h.manufacturerUseCase.UpdateManufacturer(ctx, manufacturer); err != nil {
 		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
 	}
@@ -219,5 +229,68 @@ func (h *ManufacturerHandler) Delete(c echo.Context) error {
 	if err := h.manufacturerUseCase.DeleteManufacturer(ctx, id); err != nil {
 		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
 	}
+	return c.NoContent(http.StatusNoContent)
+}
+
+// UploadImage メーカー画像アップロード
+func (h *ManufacturerHandler) UploadImage(c echo.Context) error {
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	ctx := c.Request().Context()
+
+	manufacturer, err := h.manufacturerUseCase.GetManufacturerByID(ctx, id)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+	if manufacturer == nil {
+		return c.JSON(http.StatusNotFound, handler.ErrorResponse{Message: "指定されたメーカーが見つかりませんでした。"})
+	}
+
+	fileHeader, err := c.FormFile("image")
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: "画像ファイルを選択してください。"})
+	}
+
+	imageKey, err := saveUploadedImage(fileHeader, "manufacturers", manufacturer.Code)
+	if err != nil {
+		status := http.StatusBadRequest
+		if !errors.Is(err, errImageRequired) && !errors.Is(err, errImageTooLarge) && !errors.Is(err, errImageTypeDenied) {
+			status = http.StatusInternalServerError
+		}
+		return c.JSON(status, handler.ErrorResponse{Message: err.Error()})
+	}
+
+	if err := h.manufacturerUseCase.SetManufacturerImageKey(ctx, id, &imageKey); err != nil {
+		_ = deleteStoredImage(imageKey)
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+
+	if manufacturer.ImageKey != nil {
+		_ = deleteStoredImage(*manufacturer.ImageKey)
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"imageKey": imageKey})
+}
+
+// DeleteImage メーカー画像削除
+func (h *ManufacturerHandler) DeleteImage(c echo.Context) error {
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	ctx := c.Request().Context()
+
+	manufacturer, err := h.manufacturerUseCase.GetManufacturerByID(ctx, id)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+	if manufacturer == nil {
+		return c.JSON(http.StatusNotFound, handler.ErrorResponse{Message: "指定されたメーカーが見つかりませんでした。"})
+	}
+
+	if err := h.manufacturerUseCase.SetManufacturerImageKey(ctx, id, nil); err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+
+	if manufacturer.ImageKey != nil {
+		_ = deleteStoredImage(*manufacturer.ImageKey)
+	}
+
 	return c.NoContent(http.StatusNoContent)
 }

@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -192,6 +193,15 @@ func (h *GenreHandler) Update(c echo.Context) error {
 	}
 
 	ctx := c.Request().Context()
+	existing, err := h.genreUseCase.GetGenreByID(ctx, id)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+	if existing == nil {
+		return c.JSON(http.StatusNotFound, handler.ErrorResponse{Message: "指定されたジャンルが見つかりませんでした。"})
+	}
+	genre.ImageKey = existing.ImageKey
+
 	if err := h.genreUseCase.UpdateGenre(ctx, genre); err != nil {
 		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
 	}
@@ -219,5 +229,68 @@ func (h *GenreHandler) Delete(c echo.Context) error {
 	if err := h.genreUseCase.DeleteGenre(ctx, id); err != nil {
 		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
 	}
+	return c.NoContent(http.StatusNoContent)
+}
+
+// UploadImage ジャンル画像アップロード
+func (h *GenreHandler) UploadImage(c echo.Context) error {
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	ctx := c.Request().Context()
+
+	genre, err := h.genreUseCase.GetGenreByID(ctx, id)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+	if genre == nil {
+		return c.JSON(http.StatusNotFound, handler.ErrorResponse{Message: "指定されたジャンルが見つかりませんでした。"})
+	}
+
+	fileHeader, err := c.FormFile("image")
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: "画像ファイルを選択してください。"})
+	}
+
+	imageKey, err := saveUploadedImage(fileHeader, "genres", genre.Code)
+	if err != nil {
+		status := http.StatusBadRequest
+		if !errors.Is(err, errImageRequired) && !errors.Is(err, errImageTooLarge) && !errors.Is(err, errImageTypeDenied) {
+			status = http.StatusInternalServerError
+		}
+		return c.JSON(status, handler.ErrorResponse{Message: err.Error()})
+	}
+
+	if err := h.genreUseCase.SetGenreImageKey(ctx, id, &imageKey); err != nil {
+		_ = deleteStoredImage(imageKey)
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+
+	if genre.ImageKey != nil {
+		_ = deleteStoredImage(*genre.ImageKey)
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"imageKey": imageKey})
+}
+
+// DeleteImage ジャンル画像削除
+func (h *GenreHandler) DeleteImage(c echo.Context) error {
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	ctx := c.Request().Context()
+
+	genre, err := h.genreUseCase.GetGenreByID(ctx, id)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+	if genre == nil {
+		return c.JSON(http.StatusNotFound, handler.ErrorResponse{Message: "指定されたジャンルが見つかりませんでした。"})
+	}
+
+	if err := h.genreUseCase.SetGenreImageKey(ctx, id, nil); err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+
+	if genre.ImageKey != nil {
+		_ = deleteStoredImage(*genre.ImageKey)
+	}
+
 	return c.NoContent(http.StatusNoContent)
 }

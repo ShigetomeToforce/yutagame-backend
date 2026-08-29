@@ -102,6 +102,11 @@ func (u *GenreUseCase) UpdateGenre(ctx context.Context, g *model.Genre) error {
 	return u.genreRepo.Update(ctx, g)
 }
 
+// SetGenreImageKey はジャンル画像キーを更新する
+func (u *GenreUseCase) SetGenreImageKey(ctx context.Context, id int64, imageKey *string) error {
+	return u.genreRepo.UpdateImageKey(ctx, id, imageKey)
+}
+
 // -------------------------------------------------------------------------
 // D: Delete (削除)
 // -------------------------------------------------------------------------

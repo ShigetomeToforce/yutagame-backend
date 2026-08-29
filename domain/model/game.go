@@ -9,6 +9,7 @@ type Game struct {
 	Kana            string    `gorm:"column:kana;not null" json:"kana"`
 	Overview        string    `gorm:"column:overview;not null" json:"overview"`
 	Code            string    `gorm:"column:code;not null;unique" json:"code"`
+	ImageKey        *string   `gorm:"column:image_key" json:"imageKey"`
 	ManufacturerID  int64     `gorm:"column:manufacturer_id;not null" json:"manufacturerId"`
 	MachineID       int64     `gorm:"column:machine_id;not null" json:"machineId"`
 	GenreID         int64     `gorm:"column:genre_id;not null" json:"genreId"`

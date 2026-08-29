@@ -118,6 +118,8 @@ func main() {
 			adminProtected.POST("/games", gameHandler.Create)
 			adminProtected.PUT("/games/:id", gameHandler.Update)
 			adminProtected.DELETE("/games/:id", gameHandler.Delete)
+			adminProtected.POST("/games/:id/image", gameHandler.UploadImage)
+			adminProtected.DELETE("/games/:id/image", gameHandler.DeleteImage)
 
 			// 💻 機種管理
 			adminProtected.GET("/machines", machineHandler.GetAll)
@@ -126,6 +128,8 @@ func main() {
 			adminProtected.POST("/machines", machineHandler.Create)
 			adminProtected.PUT("/machines/:id", machineHandler.Update)
 			adminProtected.DELETE("/machines/:id", machineHandler.Delete)
+			adminProtected.POST("/machines/:id/image", machineHandler.UploadImage)
+			adminProtected.DELETE("/machines/:id/image", machineHandler.DeleteImage)
 
 			// 🏷️ キーワード管理
 			adminProtected.GET("/keywords", keywordHandler.GetAll)
@@ -142,6 +146,8 @@ func main() {
 			adminProtected.POST("/genres", genreHandler.Create)
 			adminProtected.PUT("/genres/:id", genreHandler.Update)
 			adminProtected.DELETE("/genres/:id", genreHandler.Delete)
+			adminProtected.POST("/genres/:id/image", genreHandler.UploadImage)
+			adminProtected.DELETE("/genres/:id/image", genreHandler.DeleteImage)
 
 			// 🏭 メーカー管理
 			adminProtected.GET("/manufacturers", manufacturerHandler.GetAll)
@@ -150,6 +156,8 @@ func main() {
 			adminProtected.POST("/manufacturers", manufacturerHandler.Create)
 			adminProtected.PUT("/manufacturers/:id", manufacturerHandler.Update)
 			adminProtected.DELETE("/manufacturers/:id", manufacturerHandler.Delete)
+			adminProtected.POST("/manufacturers/:id/image", manufacturerHandler.UploadImage)
+			adminProtected.DELETE("/manufacturers/:id/image", manufacturerHandler.DeleteImage)
 
 			// 🔓 ユーザー管理
 			adminProtected.GET("/users", userHandler.GetAll)

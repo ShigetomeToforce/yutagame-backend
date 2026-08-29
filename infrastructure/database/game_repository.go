@@ -112,6 +112,14 @@ func (r *GameRepository) Update(ctx context.Context, g *model.Game) error {
 	return r.db.WithContext(ctx).Save(g).Error
 }
 
+// UpdateImageKey はゲーム画像キーのみを更新する
+func (r *GameRepository) UpdateImageKey(ctx context.Context, id int64, imageKey *string) error {
+	return r.db.WithContext(ctx).
+		Model(&model.Game{}).
+		Where("id = ?", id).
+		Update("image_key", imageKey).Error
+}
+
 // =========================================================================
 // D: Delete (削除)
 // =========================================================================

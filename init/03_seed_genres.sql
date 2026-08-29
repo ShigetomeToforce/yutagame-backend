@@ -13,3 +13,5 @@ INSERT INTO `genres` (id, name, kana, overview, code, created_at, updated_at) VA
 INSERT INTO `genres` (id, name, kana, overview, code, created_at, updated_at) VALUES (11, 'パズル', 'パズル', 'テレビゲームのジャンルのひとつである「パズルゲーム」とは、主に頭脳を使うことで進めるゲームのことを指します。ゲーム内で与えられた問題を解決するため、プレイヤーはロジックや推論能力を使い、タイミングを計りながらパズルのピースを組み合わせたり、配置を変えたりします。簡単なものから、非常に難しいものまで様々な難易度のゲームがあります。代表的なパズルゲームには、テトリスやパネルでポン、ジグソーパズルなどがあります。また、近年ではスマートフォンアプリにも多数のパズルゲームがリリースされています。', 'PZL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 INSERT INTO `genres` (id, name, kana, overview, code, created_at, updated_at) VALUES (12, '音楽ゲーム', 'オンガクゲーム', '音楽ゲームとは、プレイヤーが楽曲に合わせて操作をすることで、楽曲を演奏するゲームです。代表的な音楽ゲームには、音符を叩くリズムゲームや、音符をタップするタップアクションゲームなどがあります。プレイヤーは楽曲のリズムやメロディーに合わせて操作をすることで、高得点を獲得したり、難易度の高いステージをクリアすることが目的となります。音楽ゲームは、音楽に興味がある人や、リズム感を養いたい人にとっては楽しく、また、音楽を楽しむ新しい形態の1つとしても広く親しまれています。', 'MSC', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 INSERT INTO `genres` (id, name, kana, overview, code, created_at, updated_at) VALUES (13, 'その他', 'ソノタ', '他のジャンルに分類が難しいゲームを取り扱います。\r\n図鑑ゲームなどがこちらに該当します。\r\n適切な分類が見つかった場合は、適切なジャンルにゲームを移動します。', 'other', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+UPDATE `genres` SET `image_key` = CONCAT(`id`, '.jpg');

@@ -85,6 +85,14 @@ func (r *ManufacturerRepository) Update(ctx context.Context, genre *model.Manufa
 	return r.db.WithContext(ctx).Save(genre).Error
 }
 
+// UpdateImageKey はメーカー画像キーのみを更新する
+func (r *ManufacturerRepository) UpdateImageKey(ctx context.Context, id int64, imageKey *string) error {
+	return r.db.WithContext(ctx).
+		Model(&model.Manufacturer{}).
+		Where("id = ?", id).
+		Update("image_key", imageKey).Error
+}
+
 // =========================================================================
 // D: Delete (削除)
 // =========================================================================

@@ -85,6 +85,14 @@ func (r *GenreRepository) Update(ctx context.Context, genre *model.Genre) error 
 	return r.db.WithContext(ctx).Save(genre).Error
 }
 
+// UpdateImageKey はジャンル画像キーのみを更新する
+func (r *GenreRepository) UpdateImageKey(ctx context.Context, id int64, imageKey *string) error {
+	return r.db.WithContext(ctx).
+		Model(&model.Genre{}).
+		Where("id = ?", id).
+		Update("image_key", imageKey).Error
+}
+
 // =========================================================================
 // D: Delete (削除)
 // =========================================================================
