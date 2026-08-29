@@ -1,6 +1,6 @@
 # YUTAGAME Backend (Go + Echo)
 
-ゲーム在庫管理システム（YUTAGAME）のバックエンドAPIサーバーです。
+所持ゲーム管理システム（YUTAGAME）のバックエンドAPIサーバーです。
 
 ## 🛠️ 技術スタック
 

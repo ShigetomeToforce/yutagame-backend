@@ -23,7 +23,7 @@ import (
 
 // @title           Yutagame Backend API
 // @version         1.0
-// @description     ゲーム在庫管理システムのバックエンドAPI仕様書
+// @description     所持ゲーム管理システムのバックエンドAPI仕様書
 // @host            localhost:8080
 // @BasePath        /api
 

@@ -14,12 +14,16 @@ import (
 // =========================================================================
 
 // GameListFilter ゲーム検索用構造体
+// 各 boolean フィールドは nil = 未指定, true = 条件付き, false = 条件付き(false) として扱う。
 type GameListFilter struct {
 	SearchWord      string
 	ManufacturerIDs []int64
 	MachineIDs      []int64
 	GenreIDs        []int64
 	KeywordIDs      []int64
+	IsPlay          *bool
+	IsClear         *bool
+	IsFavourite     *bool
 }
 
 // GameUseCase ゲーム管理のビジネスロジックを担当するユースケース
@@ -79,7 +83,8 @@ func (u *GameUseCase) GetGamesWithPagination(
 
 	if filter.SearchWord != "" || len(filter.ManufacturerIDs) > 0 ||
 		len(filter.MachineIDs) > 0 || len(filter.GenreIDs) > 0 ||
-		len(filter.KeywordIDs) > 0 {
+		len(filter.KeywordIDs) > 0 || filter.IsPlay != nil ||
+		filter.IsClear != nil || filter.IsFavourite != nil {
 
 		whereQuery = func(db *gorm.DB) *gorm.DB {
 			if filter.SearchWord != "" {
@@ -108,6 +113,18 @@ func (u *GameUseCase) GetGamesWithPagination(
                         AND gk.keyword_id IN ?
                     )
                 `, filter.KeywordIDs)
+			}
+
+			if filter.IsPlay != nil {
+				db = db.Where("is_play = ?", *filter.IsPlay)
+			}
+
+			if filter.IsClear != nil {
+				db = db.Where("is_clear = ?", *filter.IsClear)
+			}
+
+			if filter.IsFavourite != nil {
+				db = db.Where("is_favourite = ?", *filter.IsFavourite)
 			}
 
 			return db

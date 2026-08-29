@@ -173,6 +173,9 @@ func (h *GameHandler) GetAll(c echo.Context) error {
 				MachineIDs:      handler.ParseInt64Array(c, "machineIDs"),
 				GenreIDs:        handler.ParseInt64Array(c, "genreIDs"),
 				KeywordIDs:      handler.ParseInt64Array(c, "keywordIDs"),
+				IsPlay:          handler.ParseOptionalBool(c, "isPlay"),
+				IsClear:         handler.ParseOptionalBool(c, "isClear"),
+				IsFavourite:     handler.ParseOptionalBool(c, "isFavourite"),
 			}
 		},
 	)
