@@ -3,6 +3,7 @@ package admin
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"yutagame-backend/application/usecase/admin"
 	"yutagame-backend/domain/model"
 	"yutagame-backend/interface/handler"
@@ -76,33 +77,62 @@ func (h *ManufacturerHandler) Create(c echo.Context) error {
 // R: Read (取得)
 // -------------------------------------------------------------------------
 
-// GetByID メーカー詳細取得
-// @Summary      メーカー詳細取得
-// @Description  指定されたIDのメーカー情報を取得します。
+// GetByCode メーカー詳細取得（コード指定）
+// @Summary      メーカー詳細取得（コード指定）
+// @Description  指定されたコードのメーカー情報を取得します。
 // @Tags         Manufacturers
 // @Produce      json
 // @Security     BearerAuth
-// @Param        id   path      int  true  "メーカーID"
+// @Param        code   path      string  true  "メーカーコード"
+// @Success      200  {object}  model.Manufacturer
+// @Failure      404  {object}  handler.ErrorResponse "未検出エラー"
+// @Router       /admin/manufacturers/code/{code} [get]
+func (h *ManufacturerHandler) GetByCode(c echo.Context) error {
+	code := strings.TrimSpace(c.Param("code"))
+	if code == "" {
+		code = strings.TrimSpace(c.Param("id"))
+	}
+	ctx := c.Request().Context()
+
+	manufacturer, err := h.manufacturerUseCase.GetManufacturerByCode(ctx, code)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+	if manufacturer == nil {
+		return c.JSON(http.StatusNotFound, handler.ErrorResponse{
+			Message: "指定されたコードのメーカー情報が見つかりませんでした。",
+		})
+	}
+	return c.JSON(http.StatusOK, manufacturer)
+}
+
+// GetByID メーカー詳細取得
+// @Summary      メーカー詳細取得
+// @Description  指定されたIDまたはコードのメーカー情報を取得します。
+// @Tags         Manufacturers
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      string  true  "メーカーIDまたはメーカーコード"
 // @Success      200  {object}  model.Manufacturer
 // @Failure      404  {object}  handler.ErrorResponse "未検出エラー"
 // @Router       /admin/manufacturers/{id} [get]
 func (h *ManufacturerHandler) GetByID(c echo.Context) error {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
-	ctx := c.Request().Context()
-
-	manufacturer, err := h.manufacturerUseCase.GetManufacturerByID(ctx, id)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{
-			Message: err.Error(),
-		})
+	idParam := strings.TrimSpace(c.Param("id"))
+	if idParam == "" {
+		return h.GetByCode(c)
 	}
-	if manufacturer == nil {
-		return c.JSON(http.StatusNotFound, handler.ErrorResponse{
-			Message: "指定されたIDのメーカー情報が見つかりませんでした。",
-		})
+	if id, err := strconv.ParseInt(idParam, 10, 64); err == nil {
+		ctx := c.Request().Context()
+		manufacturer, err := h.manufacturerUseCase.GetManufacturerByID(ctx, id)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+		}
+		if manufacturer == nil {
+			return c.JSON(http.StatusNotFound, handler.ErrorResponse{Message: "指定されたIDのメーカー情報が見つかりませんでした。"})
+		}
+		return c.JSON(http.StatusOK, manufacturer)
 	}
-
-	return c.JSON(http.StatusOK, manufacturer)
+	return h.GetByCode(c)
 }
 
 // GetAll メーカー一覧取得

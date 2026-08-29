@@ -50,6 +50,22 @@ func (r *GameRepository) FindByID(ctx context.Context, id int64) (*model.Game, e
 	return &game, err
 }
 
+// FindByCode コードを指定して、該当するゲーム情報を1件取得する
+func (r *GameRepository) FindByCode(ctx context.Context, code string) (*model.Game, error) {
+	var game model.Game
+	err := r.db.WithContext(ctx).
+		Preload("Manufacturer").
+		Preload("Machine").
+		Preload("Genre").
+		Preload("Keywords").
+		Where("code = ?", code).
+		First(&game).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &game, err
+}
+
 // FindAll 登録されているすべてのゲーム情報をID昇順で取得する（ページングなし）
 func (r *GameRepository) FindAll(ctx context.Context) ([]model.Game, error) {
 	var games []model.Game

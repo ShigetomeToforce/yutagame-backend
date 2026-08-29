@@ -3,6 +3,7 @@ package admin
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"yutagame-backend/application/usecase/admin"
 	"yutagame-backend/domain/model"
 	"yutagame-backend/interface/handler"
@@ -76,33 +77,62 @@ func (h *GenreHandler) Create(c echo.Context) error {
 // R: Read (取得)
 // -------------------------------------------------------------------------
 
-// GetByID ジャンル詳細取得
-// @Summary      ジャンル詳細取得
-// @Description  指定されたIDのジャンル情報を取得します。
+// GetByCode ジャンル詳細取得（コード指定）
+// @Summary      ジャンル詳細取得（コード指定）
+// @Description  指定されたコードのジャンル情報を取得します。
 // @Tags         Genres
 // @Produce      json
 // @Security     BearerAuth
-// @Param        id   path      int  true  "ジャンルID"
+// @Param        code   path      string  true  "ジャンルコード"
+// @Success      200  {object}  model.Genre
+// @Failure      404  {object}  handler.ErrorResponse "未検出エラー"
+// @Router       /admin/genres/code/{code} [get]
+func (h *GenreHandler) GetByCode(c echo.Context) error {
+	code := strings.TrimSpace(c.Param("code"))
+	if code == "" {
+		code = strings.TrimSpace(c.Param("id"))
+	}
+	ctx := c.Request().Context()
+
+	genre, err := h.genreUseCase.GetGenreByCode(ctx, code)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+	if genre == nil {
+		return c.JSON(http.StatusNotFound, handler.ErrorResponse{
+			Message: "指定されたコードのジャンル情報が見つかりませんでした。",
+		})
+	}
+	return c.JSON(http.StatusOK, genre)
+}
+
+// GetByID ジャンル詳細取得
+// @Summary      ジャンル詳細取得
+// @Description  指定されたIDまたはコードのジャンル情報を取得します。
+// @Tags         Genres
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      string  true  "ジャンルIDまたはジャンルコード"
 // @Success      200  {object}  model.Genre
 // @Failure      404  {object}  handler.ErrorResponse "未検出エラー"
 // @Router       /admin/genres/{id} [get]
 func (h *GenreHandler) GetByID(c echo.Context) error {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
-	ctx := c.Request().Context()
-
-	genre, err := h.genreUseCase.GetGenreByID(ctx, id)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{
-			Message: err.Error(),
-		})
+	idParam := strings.TrimSpace(c.Param("id"))
+	if idParam == "" {
+		return h.GetByCode(c)
 	}
-	if genre == nil {
-		return c.JSON(http.StatusNotFound, handler.ErrorResponse{
-			Message: "指定されたIDのジャンル情報が見つかりませんでした。",
-		})
+	if id, err := strconv.ParseInt(idParam, 10, 64); err == nil {
+		ctx := c.Request().Context()
+		genre, err := h.genreUseCase.GetGenreByID(ctx, id)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+		}
+		if genre == nil {
+			return c.JSON(http.StatusNotFound, handler.ErrorResponse{Message: "指定されたIDのジャンル情報が見つかりませんでした。"})
+		}
+		return c.JSON(http.StatusOK, genre)
 	}
-
-	return c.JSON(http.StatusOK, genre)
+	return h.GetByCode(c)
 }
 
 // GetAll ジャンル一覧取得

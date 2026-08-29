@@ -38,6 +38,12 @@ func NewGenreUseCase(genreRepo *database.GenreRepository) *GenreUseCase {
 
 // CreateGenre 新しいジャンルを作成する
 func (u *GenreUseCase) CreateGenre(ctx context.Context, g *model.Genre) error {
+	if err := validateDuplicateCode(ctx, g.Code, 0, func(ctx context.Context, code string) (*model.Genre, error) {
+		return u.genreRepo.FindByCode(ctx, code)
+	}); err != nil {
+		return err
+	}
+
 	return u.genreRepo.Create(ctx, g)
 }
 
@@ -48,6 +54,11 @@ func (u *GenreUseCase) CreateGenre(ctx context.Context, g *model.Genre) error {
 // GetGenreByID ジャンルIDを指定して、該当するジャンル情報を1件取得する
 func (u *GenreUseCase) GetGenreByID(ctx context.Context, id int64) (*model.Genre, error) {
 	return u.genreRepo.FindByID(ctx, id)
+}
+
+// GetGenreByCode ジャンルコードを指定して、該当するジャンル情報を1件取得する
+func (u *GenreUseCase) GetGenreByCode(ctx context.Context, code string) (*model.Genre, error) {
+	return u.genreRepo.FindByCode(ctx, code)
 }
 
 // GetAllGenres 登録されているすべてのジャンル情報を取得する（ページングなしの全件マスターデータ用）
@@ -82,6 +93,12 @@ func (u *GenreUseCase) GetGenresWithPagination(
 
 // UpdateGenre 既存のジャンル情報を更新する
 func (u *GenreUseCase) UpdateGenre(ctx context.Context, g *model.Genre) error {
+	if err := validateDuplicateCode(ctx, g.Code, g.ID, func(ctx context.Context, code string) (*model.Genre, error) {
+		return u.genreRepo.FindByCode(ctx, code)
+	}); err != nil {
+		return err
+	}
+
 	return u.genreRepo.Update(ctx, g)
 }
 

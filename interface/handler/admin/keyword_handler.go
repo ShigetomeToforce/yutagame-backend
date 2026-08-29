@@ -3,6 +3,7 @@ package admin
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"yutagame-backend/application/usecase/admin"
 	"yutagame-backend/domain/model"
 	"yutagame-backend/interface/handler"
@@ -80,33 +81,62 @@ func (h *KeywordHandler) Create(c echo.Context) error {
 // R: Read (取得)
 // -------------------------------------------------------------------------
 
-// GetByID ジャンル詳細取得
-// @Summary      ジャンル詳細取得
-// @Description  指定されたIDのジャンル情報を取得します。
+// GetByCode キーワード詳細取得（コード指定）
+// @Summary      キーワード詳細取得（コード指定）
+// @Description  指定されたコードのキーワード情報を取得します。
 // @Tags         Keywords
 // @Produce      json
 // @Security     BearerAuth
-// @Param        id   path      int  true  "キーワードID"
+// @Param        code   path      string  true  "キーワードコード"
+// @Success      200  {object}  model.Keyword
+// @Failure      404  {object}  handler.ErrorResponse "未検出エラー"
+// @Router       /admin/keywords/code/{code} [get]
+func (h *KeywordHandler) GetByCode(c echo.Context) error {
+	code := strings.TrimSpace(c.Param("code"))
+	if code == "" {
+		code = strings.TrimSpace(c.Param("id"))
+	}
+	ctx := c.Request().Context()
+
+	keyword, err := h.keywordUseCase.GetKeywordByCode(ctx, code)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+	if keyword == nil {
+		return c.JSON(http.StatusNotFound, handler.ErrorResponse{
+			Message: "指定されたコードのキーワード情報が見つかりませんでした。",
+		})
+	}
+	return c.JSON(http.StatusOK, keyword)
+}
+
+// GetByID キーワード詳細取得
+// @Summary      キーワード詳細取得
+// @Description  指定されたIDまたはコードのキーワード情報を取得します。
+// @Tags         Keywords
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      string  true  "キーワードIDまたはキーワードコード"
 // @Success      200  {object}  model.Keyword
 // @Failure      404  {object}  handler.ErrorResponse "未検出エラー"
 // @Router       /admin/keywords/{id} [get]
 func (h *KeywordHandler) GetByID(c echo.Context) error {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
-	ctx := c.Request().Context()
-
-	keyword, err := h.keywordUseCase.GetKeywordByID(ctx, id)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{
-			Message: err.Error(),
-		})
+	idParam := strings.TrimSpace(c.Param("id"))
+	if idParam == "" {
+		return h.GetByCode(c)
 	}
-	if keyword == nil {
-		return c.JSON(http.StatusNotFound, handler.ErrorResponse{
-			Message: "指定されたIDのキーワード情報が見つかりませんでした。",
-		})
+	if id, err := strconv.ParseInt(idParam, 10, 64); err == nil {
+		ctx := c.Request().Context()
+		keyword, err := h.keywordUseCase.GetKeywordByID(ctx, id)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+		}
+		if keyword == nil {
+			return c.JSON(http.StatusNotFound, handler.ErrorResponse{Message: "指定されたIDのキーワード情報が見つかりませんでした。"})
+		}
+		return c.JSON(http.StatusOK, keyword)
 	}
-
-	return c.JSON(http.StatusOK, keyword)
+	return h.GetByCode(c)
 }
 
 // GetAll キーワード一覧取得

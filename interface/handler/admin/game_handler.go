@@ -3,6 +3,7 @@ package admin
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 	"yutagame-backend/application/usecase/admin"
 	"yutagame-backend/interface/handler"
@@ -115,33 +116,65 @@ func (h *GameHandler) Create(c echo.Context) error {
 // R: Read (取得)
 // -------------------------------------------------------------------------
 
-// GetByID ゲーム詳細取得
-// @Summary      ゲーム詳細取得
-// @Description  指定されたIDのゲーム詳細情報を取得します。
+// GetByCode ゲーム詳細取得（コード指定）
+// @Summary      ゲーム詳細取得（コード指定）
+// @Description  指定されたコードのゲーム詳細情報を取得します。
 // @Tags         Games
 // @Produce      json
 // @Security     BearerAuth
-// @Param        id   path      int  true  "ゲームID"
+// @Param        code   path      string  true  "ゲームコード"
 // @Success      200  {object}  model.Game
-// @Failure      404  {object}  map[string]string
-// @Router       /admin/games/{id} [get]
-func (h *GameHandler) GetByID(c echo.Context) error {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+// @Failure      404  {object}  handler.ErrorResponse "未検出エラー"
+// @Router       /admin/games/code/{code} [get]
+func (h *GameHandler) GetByCode(c echo.Context) error {
+	code := strings.TrimSpace(c.Param("code"))
+	if code == "" {
+		code = strings.TrimSpace(c.Param("id"))
+	}
 	ctx := c.Request().Context()
 
-	game, err := h.gameUseCase.GetGameByID(ctx, id)
+	game, err := h.gameUseCase.GetGameByCode(ctx, code)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{
-			Message: err.Error(),
-		})
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
 	}
 	if game == nil {
 		return c.JSON(http.StatusNotFound, handler.ErrorResponse{
-			Message: "指定されたIDのゲーム情報が見つかりませんでした。",
+			Message: "指定されたコードのゲーム情報が見つかりませんでした。",
 		})
 	}
 
 	return c.JSON(http.StatusOK, game)
+}
+
+// GetByID ゲーム詳細取得
+// @Summary      ゲーム詳細取得
+// @Description  指定されたIDまたはコードのゲーム詳細情報を取得します。
+// @Tags         Games
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      string  true  "ゲームIDまたはゲームコード"
+// @Success      200  {object}  model.Game
+// @Failure      404  {object}  handler.ErrorResponse "未検出エラー"
+// @Router       /admin/games/{id} [get]
+func (h *GameHandler) GetByID(c echo.Context) error {
+	idParam := strings.TrimSpace(c.Param("id"))
+	if idParam == "" {
+		return h.GetByCode(c)
+	}
+	if id, err := strconv.ParseInt(idParam, 10, 64); err == nil {
+		ctx := c.Request().Context()
+		game, err := h.gameUseCase.GetGameByID(ctx, id)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+		}
+		if game == nil {
+			return c.JSON(http.StatusNotFound, handler.ErrorResponse{
+				Message: "指定されたIDのゲーム情報が見つかりませんでした。",
+			})
+		}
+		return c.JSON(http.StatusOK, game)
+	}
+	return h.GetByCode(c)
 }
 
 // GetAll ゲーム一覧取得

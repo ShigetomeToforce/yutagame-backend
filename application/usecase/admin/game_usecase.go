@@ -46,6 +46,12 @@ func NewGameUseCase(gameRepo *database.GameRepository) *GameUseCase {
 
 // CreateGame 新しいゲームを作成する
 func (u *GameUseCase) CreateGame(ctx context.Context, g *model.Game, keywordIDs []int64) error {
+	if err := validateDuplicateCode(ctx, g.Code, 0, func(ctx context.Context, code string) (*model.Game, error) {
+		return u.gameRepo.FindByCode(ctx, code)
+	}); err != nil {
+		return err
+	}
+
 	if err := u.gameRepo.Create(ctx, g); err != nil {
 		return err
 	}
@@ -66,6 +72,11 @@ func (u *GameUseCase) CreateGame(ctx context.Context, g *model.Game, keywordIDs 
 // GetGameByID ゲームIDを指定して、該当するゲーム情報を1件取得する
 func (u *GameUseCase) GetGameByID(ctx context.Context, id int64) (*model.Game, error) {
 	return u.gameRepo.FindByID(ctx, id)
+}
+
+// GetGameByCode ゲームコードを指定して、該当するゲーム情報を1件取得する
+func (u *GameUseCase) GetGameByCode(ctx context.Context, code string) (*model.Game, error) {
+	return u.gameRepo.FindByCode(ctx, code)
 }
 
 // GetAllGames 登録されているすべてのゲーム情報を取得する（ページングなしの全件マスターデータ用）
@@ -142,8 +153,14 @@ func (u *GameUseCase) GetGamesWithPagination(
 // U: Update (更新)
 // -------------------------------------------------------------------------
 
-// UpdateMachine 既存のゲーム情報を更新する
+// UpdateGame 既存のゲーム情報を更新する
 func (u *GameUseCase) UpdateGame(ctx context.Context, g *model.Game, keywordIDs []int64) error {
+	if err := validateDuplicateCode(ctx, g.Code, g.ID, func(ctx context.Context, code string) (*model.Game, error) {
+		return u.gameRepo.FindByCode(ctx, code)
+	}); err != nil {
+		return err
+	}
+
 	if err := u.gameRepo.Update(ctx, g); err != nil {
 		return err
 	}

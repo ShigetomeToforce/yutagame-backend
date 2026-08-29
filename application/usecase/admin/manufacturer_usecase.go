@@ -36,8 +36,14 @@ func NewManufacturerUseCase(manufacturerRepo *database.ManufacturerRepository) *
 // C: Create (作成)
 // ----------------------------------------------------------------------------
 
-// CreateGenre 新しいメーカーを作成する
+// CreateManufacturer 新しいメーカーを作成する
 func (u *ManufacturerUseCase) CreateManufacturer(ctx context.Context, g *model.Manufacturer) error {
+	if err := validateDuplicateCode(ctx, g.Code, 0, func(ctx context.Context, code string) (*model.Manufacturer, error) {
+		return u.manufacturerRepo.FindByCode(ctx, code)
+	}); err != nil {
+		return err
+	}
+
 	return u.manufacturerRepo.Create(ctx, g)
 }
 
@@ -48,6 +54,11 @@ func (u *ManufacturerUseCase) CreateManufacturer(ctx context.Context, g *model.M
 // GetManufacturerByID メーカーIDを指定して、該当するメーカー情報を1件取得する
 func (u *ManufacturerUseCase) GetManufacturerByID(ctx context.Context, id int64) (*model.Manufacturer, error) {
 	return u.manufacturerRepo.FindByID(ctx, id)
+}
+
+// GetManufacturerByCode メーカーコードを指定して、該当するメーカー情報を1件取得する
+func (u *ManufacturerUseCase) GetManufacturerByCode(ctx context.Context, code string) (*model.Manufacturer, error) {
+	return u.manufacturerRepo.FindByCode(ctx, code)
 }
 
 // GetAllManufacturers 登録されているすべてのメーカー情報を取得する（ページングなしの全件マスターデータ用）
@@ -82,6 +93,12 @@ func (u *ManufacturerUseCase) GetManufacturersWithPagination(
 
 // UpdateManufacturer 既存のメーカー情報を更新する
 func (u *ManufacturerUseCase) UpdateManufacturer(ctx context.Context, g *model.Manufacturer) error {
+	if err := validateDuplicateCode(ctx, g.Code, g.ID, func(ctx context.Context, code string) (*model.Manufacturer, error) {
+		return u.manufacturerRepo.FindByCode(ctx, code)
+	}); err != nil {
+		return err
+	}
+
 	return u.manufacturerRepo.Update(ctx, g)
 }
 

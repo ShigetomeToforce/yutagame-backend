@@ -38,6 +38,12 @@ func NewKeywordUseCase(keywordRepo *database.KeywordRepository) *KeywordUseCase 
 
 // CreateKeyword 新しいキーワードを作成する
 func (u *KeywordUseCase) CreateKeyword(ctx context.Context, g *model.Keyword) error {
+	if err := validateDuplicateCode(ctx, g.Code, 0, func(ctx context.Context, code string) (*model.Keyword, error) {
+		return u.keywordRepo.FindByCode(ctx, code)
+	}); err != nil {
+		return err
+	}
+
 	return u.keywordRepo.Create(ctx, g)
 }
 
@@ -48,6 +54,11 @@ func (u *KeywordUseCase) CreateKeyword(ctx context.Context, g *model.Keyword) er
 // GetKeywordByID キーワードIDを指定して、該当するキーワード情報を1件取得する
 func (u *KeywordUseCase) GetKeywordByID(ctx context.Context, id int64) (*model.Keyword, error) {
 	return u.keywordRepo.FindByID(ctx, id)
+}
+
+// GetKeywordByCode キーワードコードを指定して、該当するキーワード情報を1件取得する
+func (u *KeywordUseCase) GetKeywordByCode(ctx context.Context, code string) (*model.Keyword, error) {
+	return u.keywordRepo.FindByCode(ctx, code)
 }
 
 // GetAllKeywords 登録されているすべてのキーワード情報を取得する（ページングなしの全件マスターデータ用）
@@ -82,6 +93,12 @@ func (u *KeywordUseCase) GetKeywordsWithPagination(
 
 // UpdateKeyword 既存のキーワード情報を更新する
 func (u *KeywordUseCase) UpdateKeyword(ctx context.Context, g *model.Keyword) error {
+	if err := validateDuplicateCode(ctx, g.Code, g.ID, func(ctx context.Context, code string) (*model.Keyword, error) {
+		return u.keywordRepo.FindByCode(ctx, code)
+	}); err != nil {
+		return err
+	}
+
 	return u.keywordRepo.Update(ctx, g)
 }
 

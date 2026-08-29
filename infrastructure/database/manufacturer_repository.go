@@ -45,6 +45,16 @@ func (r *ManufacturerRepository) FindByID(ctx context.Context, id int64) (*model
 	return &manufacturer, err
 }
 
+// FindByCode コードを指定して、該当するメーカー情報を1件取得する
+func (r *ManufacturerRepository) FindByCode(ctx context.Context, code string) (*model.Manufacturer, error) {
+	var manufacturer model.Manufacturer
+	err := r.db.WithContext(ctx).Where("code = ?", code).First(&manufacturer).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &manufacturer, err
+}
+
 // FindAll 登録されているすべてのメーカー情報をID昇順で取得する（ページングなし）
 func (r *ManufacturerRepository) FindAll(ctx context.Context) ([]model.Manufacturer, error) {
 	var manufacturers []model.Manufacturer

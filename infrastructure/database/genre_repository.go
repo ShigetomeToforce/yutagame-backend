@@ -45,6 +45,16 @@ func (r *GenreRepository) FindByID(ctx context.Context, id int64) (*model.Genre,
 	return &genre, err
 }
 
+// FindByCode コードを指定して、該当するジャンル情報を1件取得する
+func (r *GenreRepository) FindByCode(ctx context.Context, code string) (*model.Genre, error) {
+	var genre model.Genre
+	err := r.db.WithContext(ctx).Where("code = ?", code).First(&genre).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &genre, err
+}
+
 // FindAll 登録されているすべてのジャンル情報をID昇順で取得する（ページングなし）
 func (r *GenreRepository) FindAll(ctx context.Context) ([]model.Genre, error) {
 	var genres []model.Genre

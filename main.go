@@ -113,6 +113,7 @@ func main() {
 
 			// 🎮 ゲーム管理
 			adminProtected.GET("/games", gameHandler.GetAll)
+			adminProtected.GET("/games/code/:code", gameHandler.GetByCode)
 			adminProtected.GET("/games/:id", gameHandler.GetByID)
 			adminProtected.POST("/games", gameHandler.Create)
 			adminProtected.PUT("/games/:id", gameHandler.Update)
@@ -120,6 +121,7 @@ func main() {
 
 			// 💻 機種管理
 			adminProtected.GET("/machines", machineHandler.GetAll)
+			adminProtected.GET("/machines/code/:code", machineHandler.GetByCode)
 			adminProtected.GET("/machines/:id", machineHandler.GetByID)
 			adminProtected.POST("/machines", machineHandler.Create)
 			adminProtected.PUT("/machines/:id", machineHandler.Update)
@@ -127,6 +129,7 @@ func main() {
 
 			// 🏷️ キーワード管理
 			adminProtected.GET("/keywords", keywordHandler.GetAll)
+			adminProtected.GET("/keywords/code/:code", keywordHandler.GetByCode)
 			adminProtected.GET("/keywords/:id", keywordHandler.GetByID)
 			adminProtected.POST("/keywords", keywordHandler.Create)
 			adminProtected.PUT("/keywords/:id", keywordHandler.Update)
@@ -134,6 +137,7 @@ func main() {
 
 			// 🧬 ジャンル管理
 			adminProtected.GET("/genres", genreHandler.GetAll)
+			adminProtected.GET("/genres/code/:code", genreHandler.GetByCode)
 			adminProtected.GET("/genres/:id", genreHandler.GetByID)
 			adminProtected.POST("/genres", genreHandler.Create)
 			adminProtected.PUT("/genres/:id", genreHandler.Update)
@@ -141,6 +145,7 @@ func main() {
 
 			// 🏭 メーカー管理
 			adminProtected.GET("/manufacturers", manufacturerHandler.GetAll)
+			adminProtected.GET("/manufacturers/code/:code", manufacturerHandler.GetByCode)
 			adminProtected.GET("/manufacturers/:id", manufacturerHandler.GetByID)
 			adminProtected.POST("/manufacturers", manufacturerHandler.Create)
 			adminProtected.PUT("/manufacturers/:id", manufacturerHandler.Update)

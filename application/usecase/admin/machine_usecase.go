@@ -39,6 +39,12 @@ func NewMachineUseCase(machineRepo *database.MachineRepository) *MachineUseCase 
 
 // CreateMachine 新しい機種を作成する
 func (u *MachineUseCase) CreateMachine(ctx context.Context, m *model.Machine) error {
+	if err := validateDuplicateCode(ctx, m.Code, 0, func(ctx context.Context, code string) (*model.Machine, error) {
+		return u.machineRepo.FindByCode(ctx, code)
+	}); err != nil {
+		return err
+	}
+
 	return u.machineRepo.Create(ctx, m)
 }
 
@@ -49,6 +55,11 @@ func (u *MachineUseCase) CreateMachine(ctx context.Context, m *model.Machine) er
 // GetMachineByID 機種IDを指定して、該当する機種情報を1件取得する
 func (u *MachineUseCase) GetMachineByID(ctx context.Context, id int64) (*model.Machine, error) {
 	return u.machineRepo.FindByID(ctx, id)
+}
+
+// GetMachineByCode 機種コードを指定して、該当する機種情報を1件取得する
+func (u *MachineUseCase) GetMachineByCode(ctx context.Context, code string) (*model.Machine, error) {
+	return u.machineRepo.FindByCode(ctx, code)
 }
 
 // GetAllMachines 登録されているすべての機種情報を取得する（ページングなしの全件マスターデータ用）
@@ -92,6 +103,12 @@ func (u *MachineUseCase) GetMachinesWithPagination(
 
 // UpdateMachine 既存の機種情報を更新する
 func (u *MachineUseCase) UpdateMachine(ctx context.Context, m *model.Machine) error {
+	if err := validateDuplicateCode(ctx, m.Code, m.ID, func(ctx context.Context, code string) (*model.Machine, error) {
+		return u.machineRepo.FindByCode(ctx, code)
+	}); err != nil {
+		return err
+	}
+
 	return u.machineRepo.Update(ctx, m)
 }
 

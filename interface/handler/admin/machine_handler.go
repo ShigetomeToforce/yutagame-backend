@@ -3,6 +3,7 @@ package admin
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 	"yutagame-backend/application/usecase/admin"
 	"yutagame-backend/interface/handler"
@@ -97,32 +98,62 @@ func (h *MachineHandler) Create(c echo.Context) error {
 // R: Read (取得)
 // -------------------------------------------------------------------------
 
-// GetByID 機種詳細取得
-// @Summary      機種詳細取得
-// @Description  指定されたIDの機種情報を取得します。
+// GetByCode 機種詳細取得（コード指定）
+// @Summary      機種詳細取得（コード指定）
+// @Description  指定されたコードの機種情報を取得します。
 // @Tags         Machines
 // @Produce      json
 // @Security     BearerAuth
-// @Param        id   path      int  true  "機種ID"
+// @Param        code   path      string  true  "機種コード"
 // @Success      200  {object}  model.Machine
-// @Router       /admin/machines/{id} [get]
-func (h *MachineHandler) GetByID(c echo.Context) error {
-	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+// @Failure      404  {object}  handler.ErrorResponse "未検出エラー"
+// @Router       /admin/machines/code/{code} [get]
+func (h *MachineHandler) GetByCode(c echo.Context) error {
+	code := strings.TrimSpace(c.Param("code"))
+	if code == "" {
+		code = strings.TrimSpace(c.Param("id"))
+	}
 	ctx := c.Request().Context()
 
-	machine, err := h.machineUseCase.GetMachineByID(ctx, id)
+	machine, err := h.machineUseCase.GetMachineByCode(ctx, code)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{
-			Message: err.Error(),
-		})
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
 	}
 	if machine == nil {
 		return c.JSON(http.StatusNotFound, handler.ErrorResponse{
-			Message: "指定されたIDの機種情報が見つかりませんでした。",
+			Message: "指定されたコードの機種情報が見つかりませんでした。",
 		})
 	}
-
 	return c.JSON(http.StatusOK, machine)
+}
+
+// GetByID 機種詳細取得
+// @Summary      機種詳細取得
+// @Description  指定されたIDまたはコードの機種情報を取得します。
+// @Tags         Machines
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      string  true  "機種IDまたは機種コード"
+// @Success      200  {object}  model.Machine
+// @Failure      404  {object}  handler.ErrorResponse "未検出エラー"
+// @Router       /admin/machines/{id} [get]
+func (h *MachineHandler) GetByID(c echo.Context) error {
+	idParam := strings.TrimSpace(c.Param("id"))
+	if idParam == "" {
+		return h.GetByCode(c)
+	}
+	if id, err := strconv.ParseInt(idParam, 10, 64); err == nil {
+		ctx := c.Request().Context()
+		machine, err := h.machineUseCase.GetMachineByID(ctx, id)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+		}
+		if machine == nil {
+			return c.JSON(http.StatusNotFound, handler.ErrorResponse{Message: "指定されたIDの機種情報が見つかりませんでした。"})
+		}
+		return c.JSON(http.StatusOK, machine)
+	}
+	return h.GetByCode(c)
 }
 
 // GetAll 機種一覧取得

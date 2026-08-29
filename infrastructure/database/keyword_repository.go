@@ -45,6 +45,16 @@ func (r *KeywordRepository) FindByID(ctx context.Context, id int64) (*model.Keyw
 	return &keyword, err
 }
 
+// FindByCode コードを指定して、該当するキーワード情報を1件取得する
+func (r *KeywordRepository) FindByCode(ctx context.Context, code string) (*model.Keyword, error) {
+	var keyword model.Keyword
+	err := r.db.WithContext(ctx).Where("code = ?", code).First(&keyword).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &keyword, err
+}
+
 // FindAll 登録されているすべてのキーワード情報をソート・ID昇順で取得する（ページングなし）
 func (r *KeywordRepository) FindAll(ctx context.Context) ([]model.Keyword, error) {
 	var keywords []model.Keyword
