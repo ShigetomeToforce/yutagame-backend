@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"errors"
+	"fmt"
 	"yutagame-backend/domain/model"
 
 	"gorm.io/gorm"
@@ -101,6 +102,59 @@ func (r *GameRepository) FindAllWithPagination(
 // CountAll ページングの総ページ数計算のため、条件に合致する機種情報の総件数を取得する
 func (r *GameRepository) CountAll(ctx context.Context, whereQueries ...func(*gorm.DB) *gorm.DB) (int64, error) {
 	return ExecuteCount[model.Game](ctx, r.db, whereQueries...)
+}
+
+// FindReleasedOnMonthDay 指定された月日と一致する発売日のゲームを取得する
+func (r *GameRepository) FindReleasedOnMonthDay(ctx context.Context, month, day, limit int) ([]model.Game, error) {
+	var games []model.Game
+	md := fmt.Sprintf("%02d-%02d", month, day)
+	err := r.db.WithContext(ctx).
+		Preload("Manufacturer").
+		Preload("Machine").
+		Preload("Genre").
+		Preload("Keywords").
+		Where("DATE_FORMAT(release_date, '%m-%d') = ?", md).
+		Order("release_date asc").
+		Limit(limit).
+		Find(&games).Error
+	if err != nil {
+		return nil, err
+	}
+	return games, nil
+}
+
+// FindRecentlyUpdated 更新日時が新しいゲームを取得する
+func (r *GameRepository) FindRecentlyUpdated(ctx context.Context, limit int) ([]model.Game, error) {
+	var games []model.Game
+	err := r.db.WithContext(ctx).
+		Preload("Manufacturer").
+		Preload("Machine").
+		Preload("Genre").
+		Preload("Keywords").
+		Order("updated_at desc").
+		Limit(limit).
+		Find(&games).Error
+	if err != nil {
+		return nil, err
+	}
+	return games, nil
+}
+
+// FindRandom ランダムにゲームを取得する
+func (r *GameRepository) FindRandom(ctx context.Context, limit int) ([]model.Game, error) {
+	var games []model.Game
+	err := r.db.WithContext(ctx).
+		Preload("Manufacturer").
+		Preload("Machine").
+		Preload("Genre").
+		Preload("Keywords").
+		Order("RAND()").
+		Limit(limit).
+		Find(&games).Error
+	if err != nil {
+		return nil, err
+	}
+	return games, nil
 }
 
 // =========================================================================

@@ -17,6 +17,13 @@ type ManufacturerRepository struct {
 	db *gorm.DB
 }
 
+type ManufacturerWithGameCount struct {
+	Code      string  `json:"code"`
+	Name      string  `json:"name"`
+	ImageKey  *string `json:"imageKey"`
+	GameCount int64   `json:"gameCount"`
+}
+
 // NewManufacturerRepository ManufacturerRepositoryの新しいインスタンスを生成するコンストラクタ
 func NewManufacturerRepository(db *gorm.DB) *ManufacturerRepository {
 	return &ManufacturerRepository{db: db}
@@ -74,6 +81,24 @@ func (r *ManufacturerRepository) FindAllWithPagination(
 // CountAll ページングの総ページ数計算のため、条件に合致するメーカー情報の総件数を取得する
 func (r *ManufacturerRepository) CountAll(ctx context.Context, whereQueries ...func(*gorm.DB) *gorm.DB) (int64, error) {
 	return ExecuteCount[model.Manufacturer](ctx, r.db, whereQueries...)
+}
+
+// FindAllWithGameCount 公開画面向けにメーカーごとのゲーム件数を集計して返す
+func (r *ManufacturerRepository) FindAllWithGameCount(ctx context.Context) ([]ManufacturerWithGameCount, error) {
+	var items []ManufacturerWithGameCount
+	err := r.db.WithContext(ctx).
+		Table("manufacturers").
+		Select(`
+			manufacturers.code,
+			manufacturers.name,
+			manufacturers.image_key,
+			COUNT(games.id) AS game_count
+		`).
+		Joins("LEFT JOIN games ON games.manufacturer_id = manufacturers.id").
+		Group("manufacturers.id").
+		Order("manufacturers.id asc").
+		Find(&items).Error
+	return items, err
 }
 
 // =========================================================================

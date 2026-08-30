@@ -17,6 +17,12 @@ type KeywordRepository struct {
 	db *gorm.DB
 }
 
+type KeywordWithGameCount struct {
+	Code      string `json:"code"`
+	Name      string `json:"name"`
+	GameCount int64  `json:"gameCount"`
+}
+
 // NewKeywordRepository KeywordRepositoryの新しいインスタンスを生成するコンストラクタ
 func NewKeywordRepository(db *gorm.DB) *KeywordRepository {
 	return &KeywordRepository{db: db}
@@ -74,6 +80,23 @@ func (r *KeywordRepository) FindAllWithPagination(
 // CountAll ページングの総ページ数計算のため、条件に合致するキーワード情報の総件数を取得する
 func (r *KeywordRepository) CountAll(ctx context.Context, whereQueries ...func(*gorm.DB) *gorm.DB) (int64, error) {
 	return ExecuteCount[model.Keyword](ctx, r.db, whereQueries...)
+}
+
+// FindAllWithGameCount 公開画面向けにキーワードごとのゲーム件数を集計して返す
+func (r *KeywordRepository) FindAllWithGameCount(ctx context.Context) ([]KeywordWithGameCount, error) {
+	var items []KeywordWithGameCount
+	err := r.db.WithContext(ctx).
+		Table("keywords").
+		Select(`
+			keywords.code,
+			keywords.name,
+			COUNT(gk.game_id) AS game_count
+		`).
+		Joins("LEFT JOIN game_keywords gk ON gk.keyword_id = keywords.id").
+		Group("keywords.id").
+		Order("keywords.sort_order asc, keywords.id asc").
+		Find(&items).Error
+	return items, err
 }
 
 // =========================================================================

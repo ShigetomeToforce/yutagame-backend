@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"os"
 	usecaseAdmin "yutagame-backend/application/usecase/admin"
+	usecaseApp "yutagame-backend/application/usecase/app"
 	"yutagame-backend/infrastructure/database"
-	handlerAdmin "yutagame-backend/interface/handler/admin"  // 💡 エイリアスを付けてインポート
+	handlerAdmin "yutagame-backend/interface/handler/admin" // 💡 エイリアスを付けてインポート
+	handlerApp "yutagame-backend/interface/handler/app"
 	customMiddleware "yutagame-backend/interface/middleware" // 💡 追加
 
 	"github.com/labstack/echo/v4"
@@ -67,6 +69,13 @@ func main() {
 	manufacturerUseCase := usecaseAdmin.NewManufacturerUseCase(manufacturerRepo)
 	adminUseCase := usecaseAdmin.NewAdminUseCase(adminRepo)
 	userUseCase := usecaseAdmin.NewUserUseCase(userRepo)
+	publicGameUseCase := usecaseApp.NewGamePublicUseCase(
+		gameRepo,
+		machineRepo,
+		genreRepo,
+		manufacturerRepo,
+		keywordRepo,
+	)
 
 	// --- Handler 層 ---
 	machineHandler := handlerAdmin.NewMachineHandler(machineUseCase)
@@ -76,6 +85,7 @@ func main() {
 	manufacturerHandler := handlerAdmin.NewManufacturerHandler(manufacturerUseCase)
 	adminHandler := handlerAdmin.NewAdminHandler(adminUseCase)
 	userHandler := handlerAdmin.NewUserHandler(userUseCase)
+	publicGameHandler := handlerApp.NewGameHandler(publicGameUseCase)
 
 	// 4. Echo インスタンスの生成と共通設定
 	e := echo.New()
@@ -96,6 +106,18 @@ func main() {
 	// 5. ルーティング定義
 	api := e.Group("/api")
 	{
+		// 🌐 【公開エリア】一般公開向けの参照系API
+		public := api.Group("/app")
+		{
+			public.GET("/top", publicGameHandler.GetTop)
+			public.GET("/catalog/machines", publicGameHandler.GetMachines)
+			public.GET("/catalog/genres", publicGameHandler.GetGenres)
+			public.GET("/catalog/manufacturers", publicGameHandler.GetManufacturers)
+			public.GET("/keywords", publicGameHandler.GetKeywords)
+			public.GET("/games", publicGameHandler.Search)
+			public.GET("/games/:code", publicGameHandler.GetByCode)
+		}
+
 		// 🔓 【完全公開エリア】ログインAPIのみ外に出す
 		api.POST("/admin/login", adminHandler.Login)
 

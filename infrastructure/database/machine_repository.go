@@ -17,6 +17,13 @@ type MachineRepository struct {
 	db *gorm.DB
 }
 
+type MachineWithGameCount struct {
+	Code      string  `json:"code"`
+	Name      string  `json:"name"`
+	ImageKey  *string `json:"imageKey"`
+	GameCount int64   `json:"gameCount"`
+}
+
 // NewMachineRepository MachineRepositoryの新しいインスタンスを生成するコンストラクタ
 func NewMachineRepository(db *gorm.DB) *MachineRepository {
 	return &MachineRepository{db: db}
@@ -80,6 +87,24 @@ func (r *MachineRepository) FindAllWithPagination(
 // CountAll ページングの総ページ数計算のため、条件に合致する機種情報の総件数を取得する
 func (r *MachineRepository) CountAll(ctx context.Context, whereQueries ...func(*gorm.DB) *gorm.DB) (int64, error) {
 	return ExecuteCount[model.Machine](ctx, r.db, whereQueries...)
+}
+
+// FindAllWithGameCount 公開画面向けに機種ごとのゲーム件数を集計して返す
+func (r *MachineRepository) FindAllWithGameCount(ctx context.Context) ([]MachineWithGameCount, error) {
+	var items []MachineWithGameCount
+	err := r.db.WithContext(ctx).
+		Table("machines").
+		Select(`
+			machines.code,
+			machines.name,
+			machines.image_key,
+			COUNT(games.id) AS game_count
+		`).
+		Joins("LEFT JOIN games ON games.machine_id = machines.id").
+		Group("machines.id").
+		Order("machines.sort_order asc, machines.id asc").
+		Find(&items).Error
+	return items, err
 }
 
 // =========================================================================

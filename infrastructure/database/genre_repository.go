@@ -17,6 +17,13 @@ type GenreRepository struct {
 	db *gorm.DB
 }
 
+type GenreWithGameCount struct {
+	Code      string  `json:"code"`
+	Name      string  `json:"name"`
+	ImageKey  *string `json:"imageKey"`
+	GameCount int64   `json:"gameCount"`
+}
+
 // NewGenreRepository GenreRepositoryの新しいインスタンスを生成するコンストラクタ
 func NewGenreRepository(db *gorm.DB) *GenreRepository {
 	return &GenreRepository{db: db}
@@ -74,6 +81,24 @@ func (r *GenreRepository) FindAllWithPagination(
 // CountAll ページングの総ページ数計算のため、条件に合致するジャンル情報の総件数を取得する
 func (r *GenreRepository) CountAll(ctx context.Context, whereQueries ...func(*gorm.DB) *gorm.DB) (int64, error) {
 	return ExecuteCount[model.Genre](ctx, r.db, whereQueries...)
+}
+
+// FindAllWithGameCount 公開画面向けにジャンルごとのゲーム件数を集計して返す
+func (r *GenreRepository) FindAllWithGameCount(ctx context.Context) ([]GenreWithGameCount, error) {
+	var items []GenreWithGameCount
+	err := r.db.WithContext(ctx).
+		Table("genres").
+		Select(`
+			genres.code,
+			genres.name,
+			genres.image_key,
+			COUNT(games.id) AS game_count
+		`).
+		Joins("LEFT JOIN games ON games.genre_id = genres.id").
+		Group("genres.id").
+		Order("genres.id asc").
+		Find(&items).Error
+	return items, err
 }
 
 // =========================================================================
