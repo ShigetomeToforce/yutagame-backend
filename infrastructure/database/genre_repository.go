@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"errors"
+	"sort"
 	"yutagame-backend/domain/model"
 
 	"gorm.io/gorm"
@@ -69,6 +70,29 @@ func (r *GenreRepository) FindAll(ctx context.Context) ([]model.Genre, error) {
 	return genres, err
 }
 
+// FindByIDs 指定されたID群に一致するジャンルをまとめて取得する
+func (r *GenreRepository) FindByIDs(ctx context.Context, ids []int64) ([]model.Genre, error) {
+	if len(ids) == 0 {
+		return []model.Genre{}, nil
+	}
+
+	var genres []model.Genre
+	err := r.db.WithContext(ctx).
+		Where("id IN ?", ids).
+		Order("id asc").
+		Find(&genres).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// 入力順は保証しないので、ID昇順を明示して返す
+	sort.Slice(genres, func(i, j int) bool {
+		return genres[i].ID < genres[j].ID
+	})
+
+	return genres, nil
+}
+
 // FindAllWithPagination 指定された件数（limit）と開始位置（offset）に応じて、ジャンル情報をID昇順で取得する
 func (r *GenreRepository) FindAllWithPagination(
 	ctx context.Context,
@@ -108,6 +132,18 @@ func (r *GenreRepository) FindAllWithGameCount(ctx context.Context) ([]GenreWith
 // Update 既存のジャンル情報（名前、説明など）を更新する
 func (r *GenreRepository) Update(ctx context.Context, genre *model.Genre) error {
 	return r.db.WithContext(ctx).Save(genre).Error
+}
+
+// UpdateFieldsByID 指定IDのジャンルに対し、指定カラムだけを更新する
+func (r *GenreRepository) UpdateFieldsByID(ctx context.Context, id int64, updates map[string]any) error {
+	if len(updates) == 0 {
+		return nil
+	}
+
+	return r.db.WithContext(ctx).
+		Model(&model.Genre{}).
+		Where("id = ?", id).
+		Updates(updates).Error
 }
 
 // UpdateImageKey はジャンル画像キーのみを更新する

@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"errors"
+	"sort"
 	"yutagame-backend/domain/model"
 
 	"gorm.io/gorm"
@@ -69,6 +70,28 @@ func (r *ManufacturerRepository) FindAll(ctx context.Context) ([]model.Manufactu
 	return manufacturers, err
 }
 
+// FindByIDs 指定されたID群に一致するメーカーをまとめて取得する
+func (r *ManufacturerRepository) FindByIDs(ctx context.Context, ids []int64) ([]model.Manufacturer, error) {
+	if len(ids) == 0 {
+		return []model.Manufacturer{}, nil
+	}
+
+	var manufacturers []model.Manufacturer
+	err := r.db.WithContext(ctx).
+		Where("id IN ?", ids).
+		Order("id asc").
+		Find(&manufacturers).Error
+	if err != nil {
+		return nil, err
+	}
+
+	sort.Slice(manufacturers, func(i, j int) bool {
+		return manufacturers[i].ID < manufacturers[j].ID
+	})
+
+	return manufacturers, nil
+}
+
 // FindAllWithPagination 指定された件数（limit）と開始位置（offset）に応じて、メーカー情報をID昇順で取得する
 func (r *ManufacturerRepository) FindAllWithPagination(
 	ctx context.Context,
@@ -108,6 +131,18 @@ func (r *ManufacturerRepository) FindAllWithGameCount(ctx context.Context) ([]Ma
 // Update 既存のメーカー情報（名前、説明など）を更新する
 func (r *ManufacturerRepository) Update(ctx context.Context, genre *model.Manufacturer) error {
 	return r.db.WithContext(ctx).Save(genre).Error
+}
+
+// UpdateFieldsByID 指定IDのメーカーに対し、指定カラムだけを更新する
+func (r *ManufacturerRepository) UpdateFieldsByID(ctx context.Context, id int64, updates map[string]any) error {
+	if len(updates) == 0 {
+		return nil
+	}
+
+	return r.db.WithContext(ctx).
+		Model(&model.Manufacturer{}).
+		Where("id = ?", id).
+		Updates(updates).Error
 }
 
 // UpdateImageKey はメーカー画像キーのみを更新する

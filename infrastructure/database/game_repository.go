@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"yutagame-backend/domain/model"
 
 	"gorm.io/gorm"
@@ -80,6 +81,28 @@ func (r *GameRepository) FindAll(ctx context.Context) ([]model.Game, error) {
 	if err != nil {
 		return nil, err
 	}
+	return games, nil
+}
+
+// FindByIDs 指定されたID群に一致するゲームをまとめて取得する
+func (r *GameRepository) FindByIDs(ctx context.Context, ids []int64) ([]model.Game, error) {
+	if len(ids) == 0 {
+		return []model.Game{}, nil
+	}
+
+	var games []model.Game
+	err := r.db.WithContext(ctx).
+		Where("id IN ?", ids).
+		Order("id asc").
+		Find(&games).Error
+	if err != nil {
+		return nil, err
+	}
+
+	sort.Slice(games, func(i, j int) bool {
+		return games[i].ID < games[j].ID
+	})
+
 	return games, nil
 }
 
@@ -164,6 +187,18 @@ func (r *GameRepository) FindRandom(ctx context.Context, limit int) ([]model.Gam
 // Update は既存のゲーム情報を更新します
 func (r *GameRepository) Update(ctx context.Context, g *model.Game) error {
 	return r.db.WithContext(ctx).Save(g).Error
+}
+
+// UpdateFieldsByID 指定IDのゲームに対し、指定カラムだけを更新する
+func (r *GameRepository) UpdateFieldsByID(ctx context.Context, id int64, updates map[string]any) error {
+	if len(updates) == 0 {
+		return nil
+	}
+
+	return r.db.WithContext(ctx).
+		Model(&model.Game{}).
+		Where("id = ?", id).
+		Updates(updates).Error
 }
 
 // UpdateImageKey はゲーム画像キーのみを更新する

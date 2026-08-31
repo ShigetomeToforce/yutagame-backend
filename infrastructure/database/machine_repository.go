@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"errors"
+	"sort"
 	"yutagame-backend/domain/model"
 
 	"gorm.io/gorm"
@@ -72,6 +73,28 @@ func (r *MachineRepository) FindAll(ctx context.Context) ([]model.Machine, error
 	return machines, nil
 }
 
+// FindByIDs 指定されたID群に一致する機種をまとめて取得する
+func (r *MachineRepository) FindByIDs(ctx context.Context, ids []int64) ([]model.Machine, error) {
+	if len(ids) == 0 {
+		return []model.Machine{}, nil
+	}
+
+	var machines []model.Machine
+	err := r.db.WithContext(ctx).
+		Where("id IN ?", ids).
+		Order("id asc").
+		Find(&machines).Error
+	if err != nil {
+		return nil, err
+	}
+
+	sort.Slice(machines, func(i, j int) bool {
+		return machines[i].ID < machines[j].ID
+	})
+
+	return machines, nil
+}
+
 // FindAllWithPagination 指定された件数（limit）と開始位置（offset）に応じて、機種情報をID昇順で取得する
 func (r *MachineRepository) FindAllWithPagination(
 	ctx context.Context,
@@ -114,6 +137,18 @@ func (r *MachineRepository) FindAllWithGameCount(ctx context.Context) ([]Machine
 // Update 既存の機種情報（名前、説明など）を更新する
 func (r *MachineRepository) Update(ctx context.Context, m *model.Machine) error {
 	return r.db.WithContext(ctx).Save(m).Error
+}
+
+// UpdateFieldsByID 指定IDの機種に対し、指定カラムだけを更新する
+func (r *MachineRepository) UpdateFieldsByID(ctx context.Context, id int64, updates map[string]any) error {
+	if len(updates) == 0 {
+		return nil
+	}
+
+	return r.db.WithContext(ctx).
+		Model(&model.Machine{}).
+		Where("id = ?", id).
+		Updates(updates).Error
 }
 
 // UpdateImageKey は機種画像キーのみを更新する

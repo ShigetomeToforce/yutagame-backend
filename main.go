@@ -140,6 +140,9 @@ func main() {
 			adminProtected.POST("/games", gameHandler.Create)
 			adminProtected.PUT("/games/:id", gameHandler.Update)
 			adminProtected.DELETE("/games/:id", gameHandler.Delete)
+			adminProtected.POST("/games/export", gameHandler.ExportCSV)
+			adminProtected.POST("/games/import/preview", gameHandler.PreviewImportCSV)
+			adminProtected.POST("/games/import/apply", gameHandler.ApplyImportCSV)
 			adminProtected.POST("/games/:id/image", gameHandler.UploadImage)
 			adminProtected.DELETE("/games/:id/image", gameHandler.DeleteImage)
 
@@ -150,6 +153,9 @@ func main() {
 			adminProtected.POST("/machines", machineHandler.Create)
 			adminProtected.PUT("/machines/:id", machineHandler.Update)
 			adminProtected.DELETE("/machines/:id", machineHandler.Delete)
+			adminProtected.POST("/machines/export", machineHandler.ExportCSV)
+			adminProtected.POST("/machines/import/preview", machineHandler.PreviewImportCSV)
+			adminProtected.POST("/machines/import/apply", machineHandler.ApplyImportCSV)
 			adminProtected.POST("/machines/:id/image", machineHandler.UploadImage)
 			adminProtected.DELETE("/machines/:id/image", machineHandler.DeleteImage)
 
@@ -160,6 +166,9 @@ func main() {
 			adminProtected.POST("/keywords", keywordHandler.Create)
 			adminProtected.PUT("/keywords/:id", keywordHandler.Update)
 			adminProtected.DELETE("/keywords/:id", keywordHandler.Delete)
+			adminProtected.POST("/keywords/export", keywordHandler.ExportCSV)
+			adminProtected.POST("/keywords/import/preview", keywordHandler.PreviewImportCSV)
+			adminProtected.POST("/keywords/import/apply", keywordHandler.ApplyImportCSV)
 
 			// 🧬 ジャンル管理
 			adminProtected.GET("/genres", genreHandler.GetAll)
@@ -168,6 +177,9 @@ func main() {
 			adminProtected.POST("/genres", genreHandler.Create)
 			adminProtected.PUT("/genres/:id", genreHandler.Update)
 			adminProtected.DELETE("/genres/:id", genreHandler.Delete)
+			adminProtected.POST("/genres/export", genreHandler.ExportCSV)
+			adminProtected.POST("/genres/import/preview", genreHandler.PreviewImportCSV)
+			adminProtected.POST("/genres/import/apply", genreHandler.ApplyImportCSV)
 			adminProtected.POST("/genres/:id/image", genreHandler.UploadImage)
 			adminProtected.DELETE("/genres/:id/image", genreHandler.DeleteImage)
 
@@ -178,6 +190,9 @@ func main() {
 			adminProtected.POST("/manufacturers", manufacturerHandler.Create)
 			adminProtected.PUT("/manufacturers/:id", manufacturerHandler.Update)
 			adminProtected.DELETE("/manufacturers/:id", manufacturerHandler.Delete)
+			adminProtected.POST("/manufacturers/export", manufacturerHandler.ExportCSV)
+			adminProtected.POST("/manufacturers/import/preview", manufacturerHandler.PreviewImportCSV)
+			adminProtected.POST("/manufacturers/import/apply", manufacturerHandler.ApplyImportCSV)
 			adminProtected.POST("/manufacturers/:id/image", manufacturerHandler.UploadImage)
 			adminProtected.DELETE("/manufacturers/:id/image", manufacturerHandler.DeleteImage)
 

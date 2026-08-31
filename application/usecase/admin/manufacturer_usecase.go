@@ -2,6 +2,8 @@ package admin
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"yutagame-backend/application/usecase"
 	"yutagame-backend/domain/model"
 	"yutagame-backend/infrastructure/database"
@@ -105,6 +107,245 @@ func (u *ManufacturerUseCase) UpdateManufacturer(ctx context.Context, g *model.M
 // SetManufacturerImageKey はメーカー画像キーを更新する
 func (u *ManufacturerUseCase) SetManufacturerImageKey(ctx context.Context, id int64, imageKey *string) error {
 	return u.manufacturerRepo.UpdateImageKey(ctx, id, imageKey)
+}
+
+type ManufacturerCSVRowInput struct {
+	RowNumber int64   `json:"rowNumber"`
+	ID        *int64  `json:"id"`
+	Name      *string `json:"name"`
+	Kana      *string `json:"kana"`
+	Overview  *string `json:"overview"`
+	Code      *string `json:"code"`
+}
+
+type ManufacturerCSVFieldDiff struct {
+	Field string `json:"field"`
+	From  string `json:"from"`
+	To    string `json:"to"`
+}
+
+type ManufacturerCSVOperation struct {
+	RowNumber  int64                      `json:"rowNumber"`
+	Action     string                     `json:"action"`
+	ID         *int64                     `json:"id"`
+	Selectable bool                       `json:"selectable"`
+	Reason     string                     `json:"reason"`
+	Diffs      []ManufacturerCSVFieldDiff `json:"diffs"`
+	Payload    ManufacturerCSVRowInput    `json:"payload"`
+}
+
+type ManufacturerCSVPreview struct {
+	Operations    []ManufacturerCSVOperation `json:"operations"`
+	Creatable     int                        `json:"creatable"`
+	Updatable     int                        `json:"updatable"`
+	Skipped       int                        `json:"skipped"`
+	SelectableAll int                        `json:"selectableAll"`
+}
+
+// BuildCSVPreview CSV入力行から、実行可能な更新・登録内容の差分プレビューを作成する
+func (u *ManufacturerUseCase) BuildCSVPreview(ctx context.Context, rows []ManufacturerCSVRowInput) (*ManufacturerCSVPreview, error) {
+	ids := make([]int64, 0, len(rows))
+	for _, row := range rows {
+		if row.ID != nil && *row.ID > 0 {
+			ids = append(ids, *row.ID)
+		}
+	}
+
+	existingList, err := u.manufacturerRepo.FindByIDs(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+
+	existingByID := map[int64]model.Manufacturer{}
+	for _, item := range existingList {
+		existingByID[item.ID] = item
+	}
+
+	preview := &ManufacturerCSVPreview{Operations: make([]ManufacturerCSVOperation, 0, len(rows))}
+
+	for _, row := range rows {
+		op := ManufacturerCSVOperation{
+			RowNumber:  row.RowNumber,
+			ID:         row.ID,
+			Action:     "skip",
+			Selectable: false,
+			Diffs:      make([]ManufacturerCSVFieldDiff, 0),
+			Payload:    row,
+		}
+
+		if row.ID == nil || *row.ID < 1 {
+			op.Reason = "ID列が空、または不正なためスキップ"
+			preview.Skipped++
+			preview.Operations = append(preview.Operations, op)
+			continue
+		}
+
+		existing, found := existingByID[*row.ID]
+		if !found {
+			missing := missingRequiredForManufacturerCreate(row)
+			if len(missing) > 0 {
+				op.Reason = "新規登録に必要な列が不足: " + strings.Join(missing, ", ")
+				preview.Skipped++
+				preview.Operations = append(preview.Operations, op)
+				continue
+			}
+
+			op.Action = "create"
+			op.Selectable = true
+			op.Reason = "IDに一致する既存レコードがないため新規登録"
+			preview.Creatable++
+			preview.SelectableAll++
+			preview.Operations = append(preview.Operations, op)
+			continue
+		}
+
+		updates, diffs := buildManufacturerUpdateMapAndDiff(existing, row)
+		if len(updates) == 0 {
+			op.Reason = "更新対象の差分がないためスキップ"
+			preview.Skipped++
+			preview.Operations = append(preview.Operations, op)
+			continue
+		}
+
+		op.Action = "update"
+		op.Selectable = true
+		op.Diffs = diffs
+		op.Reason = "差分あり"
+		preview.Updatable++
+		preview.SelectableAll++
+		preview.Operations = append(preview.Operations, op)
+	}
+
+	return preview, nil
+}
+
+// ApplyCSVOperations チェックされた差分のみを適用する
+func (u *ManufacturerUseCase) ApplyCSVOperations(ctx context.Context, operations []ManufacturerCSVOperation) (int, int, error) {
+	created := 0
+	updated := 0
+
+	for _, op := range operations {
+		if !op.Selectable {
+			continue
+		}
+		if op.ID == nil || *op.ID < 1 {
+			continue
+		}
+
+		switch op.Action {
+		case "create":
+			missing := missingRequiredForManufacturerCreate(op.Payload)
+			if len(missing) > 0 {
+				continue
+			}
+
+			code := strings.TrimSpace(valueOrEmpty(op.Payload.Code))
+			if err := validateDuplicateCode(ctx, code, 0, func(ctx context.Context, code string) (*model.Manufacturer, error) {
+				return u.manufacturerRepo.FindByCode(ctx, code)
+			}); err != nil {
+				return created, updated, fmt.Errorf("row %d: %w", op.RowNumber, err)
+			}
+
+			item := &model.Manufacturer{
+				ID:       *op.ID,
+				Name:     strings.TrimSpace(valueOrEmpty(op.Payload.Name)),
+				Kana:     strings.TrimSpace(valueOrEmpty(op.Payload.Kana)),
+				Overview: strings.TrimSpace(valueOrEmpty(op.Payload.Overview)),
+				Code:     code,
+			}
+
+			if err := u.manufacturerRepo.Create(ctx, item); err != nil {
+				return created, updated, fmt.Errorf("row %d create failed: %w", op.RowNumber, err)
+			}
+			created++
+
+		case "update":
+			existing, err := u.manufacturerRepo.FindByID(ctx, *op.ID)
+			if err != nil {
+				return created, updated, fmt.Errorf("row %d: %w", op.RowNumber, err)
+			}
+			if existing == nil {
+				continue
+			}
+
+			updates, _ := buildManufacturerUpdateMapAndDiff(*existing, op.Payload)
+			if len(updates) == 0 {
+				continue
+			}
+
+			if codeRaw, ok := updates["code"]; ok {
+				code, _ := codeRaw.(string)
+				if err := validateDuplicateCode(ctx, code, *op.ID, func(ctx context.Context, code string) (*model.Manufacturer, error) {
+					return u.manufacturerRepo.FindByCode(ctx, code)
+				}); err != nil {
+					return created, updated, fmt.Errorf("row %d: %w", op.RowNumber, err)
+				}
+			}
+
+			if err := u.manufacturerRepo.UpdateFieldsByID(ctx, *op.ID, updates); err != nil {
+				return created, updated, fmt.Errorf("row %d update failed: %w", op.RowNumber, err)
+			}
+			updated++
+		}
+	}
+
+	return created, updated, nil
+}
+
+func missingRequiredForManufacturerCreate(row ManufacturerCSVRowInput) []string {
+	missing := make([]string, 0, 4)
+	if strings.TrimSpace(valueOrEmpty(row.Name)) == "" {
+		missing = append(missing, "name")
+	}
+	if strings.TrimSpace(valueOrEmpty(row.Kana)) == "" {
+		missing = append(missing, "kana")
+	}
+	if strings.TrimSpace(valueOrEmpty(row.Overview)) == "" {
+		missing = append(missing, "overview")
+	}
+	if strings.TrimSpace(valueOrEmpty(row.Code)) == "" {
+		missing = append(missing, "code")
+	}
+	return missing
+}
+
+func buildManufacturerUpdateMapAndDiff(existing model.Manufacturer, row ManufacturerCSVRowInput) (map[string]any, []ManufacturerCSVFieldDiff) {
+	updates := map[string]any{}
+	diffs := make([]ManufacturerCSVFieldDiff, 0, 4)
+
+	if row.Name != nil {
+		next := strings.TrimSpace(*row.Name)
+		if next != "" && normalizeComparableValue(next) != normalizeComparableValue(existing.Name) {
+			updates["name"] = next
+			diffs = append(diffs, ManufacturerCSVFieldDiff{Field: "name", From: existing.Name, To: next})
+		}
+	}
+
+	if row.Kana != nil {
+		next := strings.TrimSpace(*row.Kana)
+		if next != "" && normalizeComparableValue(next) != normalizeComparableValue(existing.Kana) {
+			updates["kana"] = next
+			diffs = append(diffs, ManufacturerCSVFieldDiff{Field: "kana", From: existing.Kana, To: next})
+		}
+	}
+
+	if row.Overview != nil {
+		next := strings.TrimSpace(*row.Overview)
+		if next != "" && normalizeComparableValue(next) != normalizeComparableValue(existing.Overview) {
+			updates["overview"] = next
+			diffs = append(diffs, ManufacturerCSVFieldDiff{Field: "overview", From: existing.Overview, To: next})
+		}
+	}
+
+	if row.Code != nil {
+		next := strings.TrimSpace(*row.Code)
+		if next != "" && normalizeComparableValue(next) != normalizeComparableValue(existing.Code) {
+			updates["code"] = next
+			diffs = append(diffs, ManufacturerCSVFieldDiff{Field: "code", From: existing.Code, To: next})
+		}
+	}
+
+	return updates, diffs
 }
 
 // ----------------------------------------------------------------------------

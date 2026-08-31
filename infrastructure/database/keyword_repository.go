@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"errors"
+	"sort"
 	"yutagame-backend/domain/model"
 
 	"gorm.io/gorm"
@@ -68,6 +69,28 @@ func (r *KeywordRepository) FindAll(ctx context.Context) ([]model.Keyword, error
 	return keywords, err
 }
 
+// FindByIDs 指定されたID群に一致するキーワードをまとめて取得する
+func (r *KeywordRepository) FindByIDs(ctx context.Context, ids []int64) ([]model.Keyword, error) {
+	if len(ids) == 0 {
+		return []model.Keyword{}, nil
+	}
+
+	var keywords []model.Keyword
+	err := r.db.WithContext(ctx).
+		Where("id IN ?", ids).
+		Order("id asc").
+		Find(&keywords).Error
+	if err != nil {
+		return nil, err
+	}
+
+	sort.Slice(keywords, func(i, j int) bool {
+		return keywords[i].ID < keywords[j].ID
+	})
+
+	return keywords, nil
+}
+
 // FindAllWithPagination 指定された件数（limit）と開始位置（offset）に応じて、キーワード情報をソート・ID昇順で取得する
 func (r *KeywordRepository) FindAllWithPagination(
 	ctx context.Context,
@@ -106,6 +129,18 @@ func (r *KeywordRepository) FindAllWithGameCount(ctx context.Context) ([]Keyword
 // Update は既存のキーワード情報を更新します
 func (r *KeywordRepository) Update(ctx context.Context, k *model.Keyword) error {
 	return r.db.WithContext(ctx).Save(k).Error
+}
+
+// UpdateFieldsByID 指定IDのキーワードに対し、指定カラムだけを更新する
+func (r *KeywordRepository) UpdateFieldsByID(ctx context.Context, id int64, updates map[string]any) error {
+	if len(updates) == 0 {
+		return nil
+	}
+
+	return r.db.WithContext(ctx).
+		Model(&model.Keyword{}).
+		Where("id = ?", id).
+		Updates(updates).Error
 }
 
 // =========================================================================
