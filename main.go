@@ -9,6 +9,7 @@ import (
 	usecaseApp "yutagame-backend/application/usecase/app"
 	"yutagame-backend/domain/model"
 	"yutagame-backend/infrastructure/database"
+	"yutagame-backend/infrastructure/filelog"
 	handlerAdmin "yutagame-backend/interface/handler/admin" // 💡 エイリアスを付けてインポート
 	handlerApp "yutagame-backend/interface/handler/app"
 	customMiddleware "yutagame-backend/interface/middleware" // 💡 追加
@@ -35,6 +36,9 @@ import (
 // @name                       Authorization
 // @description                "Bearer {token}" の形式でJWTトークンを入力してください。
 func main() {
+	backendLogDir := os.Getenv("BACKEND_LOG_DIR")
+	backendFileLogger := filelog.NewDailyLogger(backendLogDir, "backend")
+
 	// 1. データベース接続情報 (コンテナ環境変数から取得)
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 		os.Getenv("DB_USER"),
@@ -106,6 +110,7 @@ func main() {
 	announcementHandler := handlerAdmin.NewAnnouncementHandler(announcementUseCase)
 	contactInquiryHandler := handlerAdmin.NewContactInquiryHandler(contactUseCase)
 	accessLogHandler := handlerAdmin.NewAccessLogHandler(accessLogUseCase)
+	logFileHandler := handlerAdmin.NewLogFileHandler(backendFileLogger)
 	publicGameHandler := handlerApp.NewGameHandler(publicGameUseCase)
 	publicGameFavoriteHandler := handlerApp.NewGameFavoriteHandler(favoriteUseCase)
 	publicAnnouncementHandler := handlerApp.NewAnnouncementHandler(publicAnnouncementUseCase)
@@ -117,7 +122,7 @@ func main() {
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-	e.Use(customMiddleware.AccessLog(accessLogPublicUseCase))
+	e.Use(customMiddleware.RequestFileLog(backendFileLogger))
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{"*"},
 		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
@@ -221,6 +226,7 @@ func main() {
 
 			adminProtected.GET("/access-logs", accessLogHandler.GetAll)
 			adminProtected.GET("/access-logs/dashboard", accessLogHandler.GetDashboard)
+			adminProtected.GET("/log-files", logFileHandler.GetAll)
 
 			// 🧬 ジャンル管理
 			adminProtected.GET("/genres", genreHandler.GetAll)
