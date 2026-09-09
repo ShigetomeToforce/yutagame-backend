@@ -40,6 +40,11 @@ type GameSaveRequest struct {
 	KeywordIDs      []int64 `json:"keywordIds"` // 💡 紐付けるキーワードのID配列
 }
 
+type GameAffiliateSaveRequest struct {
+	Category string `json:"category"`
+	URL      string `json:"url"`
+}
+
 // GameHandler ゲームに関連するHTTPリクエストの受付とレスポンスの制御を担当するハンドラー
 type GameHandler struct {
 	gameUseCase *admin.GameUseCase
@@ -368,5 +373,78 @@ func (h *GameHandler) DeleteImage(c echo.Context) error {
 		_ = deleteStoredImage(*game.ImageKey)
 	}
 
+	return c.NoContent(http.StatusNoContent)
+}
+
+func (h *GameHandler) ListAffiliates(c echo.Context) error {
+	gameID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || gameID < 1 {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: "ゲームIDが不正です。"})
+	}
+
+	ctx := c.Request().Context()
+	items, err := h.gameUseCase.ListAffiliatesByGameID(ctx, gameID)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+	return c.JSON(http.StatusOK, items)
+}
+
+func (h *GameHandler) CreateAffiliate(c echo.Context) error {
+	gameID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || gameID < 1 {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: "ゲームIDが不正です。"})
+	}
+
+	var req GameAffiliateSaveRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+
+	ctx := c.Request().Context()
+	item, err := h.gameUseCase.CreateAffiliate(ctx, gameID, req.Category, req.URL)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+	return c.JSON(http.StatusCreated, item)
+}
+
+func (h *GameHandler) UpdateAffiliate(c echo.Context) error {
+	gameID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || gameID < 1 {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: "ゲームIDが不正です。"})
+	}
+	affiliateID, err := strconv.ParseInt(c.Param("affiliateId"), 10, 64)
+	if err != nil || affiliateID < 1 {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: "購入リンクIDが不正です。"})
+	}
+
+	var req GameAffiliateSaveRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+
+	ctx := c.Request().Context()
+	item, err := h.gameUseCase.UpdateAffiliate(ctx, gameID, affiliateID, req.Category, req.URL)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
+	return c.JSON(http.StatusOK, item)
+}
+
+func (h *GameHandler) DeleteAffiliate(c echo.Context) error {
+	gameID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || gameID < 1 {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: "ゲームIDが不正です。"})
+	}
+	affiliateID, err := strconv.ParseInt(c.Param("affiliateId"), 10, 64)
+	if err != nil || affiliateID < 1 {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: "購入リンクIDが不正です。"})
+	}
+
+	ctx := c.Request().Context()
+	if err := h.gameUseCase.DeleteAffiliate(ctx, gameID, affiliateID); err != nil {
+		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
+	}
 	return c.NoContent(http.StatusNoContent)
 }

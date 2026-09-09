@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 	"yutagame-backend/application/usecase"
@@ -32,6 +33,16 @@ type GameListFilter struct {
 // GameUseCase ゲーム管理のビジネスロジックを担当するユースケース
 type GameUseCase struct {
 	gameRepo *database.GameRepository
+}
+
+var validAffiliateCategories = map[string]struct{}{
+	"AMAZON":            {},
+	"RAKUTEN":           {},
+	"YAHOO":             {},
+	"SURUGAYA":          {},
+	"PLAYSTATION_STORE": {},
+	"NINTENDO_STORE":    {},
+	"STEAM":             {},
 }
 
 // NewGameUseCase GameUseCaseの新しいインスタンスを生成するコンストラクタ
@@ -174,6 +185,109 @@ func (u *GameUseCase) UpdateGame(ctx context.Context, g *model.Game, keywordIDs 
 // SetGameImageKey ゲーム画像キーを更新する
 func (u *GameUseCase) SetGameImageKey(ctx context.Context, id int64, imageKey *string) error {
 	return u.gameRepo.UpdateImageKey(ctx, id, imageKey)
+}
+
+func (u *GameUseCase) ListAffiliatesByGameID(ctx context.Context, gameID int64) ([]model.GameAffiliate, error) {
+	return u.gameRepo.ListAffiliatesByGameID(ctx, gameID)
+}
+
+func (u *GameUseCase) CreateAffiliate(ctx context.Context, gameID int64, category, rawURL string) (*model.GameAffiliate, error) {
+	if err := u.validateAffiliateInput(category, rawURL); err != nil {
+		return nil, err
+	}
+
+	game, err := u.gameRepo.FindByID(ctx, gameID)
+	if err != nil {
+		return nil, err
+	}
+	if game == nil {
+		return nil, fmt.Errorf("指定されたゲームが見つかりませんでした")
+	}
+
+	category = normalizeAffiliateCategory(category)
+	urlValue := strings.TrimSpace(rawURL)
+
+	existing, err := u.gameRepo.FindAffiliateByGameIDAndCategory(ctx, gameID, category)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil {
+		return nil, fmt.Errorf("同じカテゴリの購入リンクは既に登録されています")
+	}
+
+	item := &model.GameAffiliate{
+		GameID:   gameID,
+		Category: category,
+		URL:      urlValue,
+	}
+	if err := u.gameRepo.CreateAffiliate(ctx, item); err != nil {
+		return nil, err
+	}
+	return item, nil
+}
+
+func (u *GameUseCase) UpdateAffiliate(ctx context.Context, gameID, affiliateID int64, category, rawURL string) (*model.GameAffiliate, error) {
+	if err := u.validateAffiliateInput(category, rawURL); err != nil {
+		return nil, err
+	}
+
+	item, err := u.gameRepo.FindAffiliateByID(ctx, affiliateID)
+	if err != nil {
+		return nil, err
+	}
+	if item == nil || item.GameID != gameID {
+		return nil, fmt.Errorf("指定された購入リンクが見つかりませんでした")
+	}
+
+	category = normalizeAffiliateCategory(category)
+	urlValue := strings.TrimSpace(rawURL)
+
+	duplicate, err := u.gameRepo.FindAffiliateByGameIDAndCategory(ctx, gameID, category)
+	if err != nil {
+		return nil, err
+	}
+	if duplicate != nil && duplicate.ID != item.ID {
+		return nil, fmt.Errorf("同じカテゴリの購入リンクは既に登録されています")
+	}
+
+	item.Category = category
+	item.URL = urlValue
+	if err := u.gameRepo.UpdateAffiliate(ctx, item); err != nil {
+		return nil, err
+	}
+	return item, nil
+}
+
+func (u *GameUseCase) DeleteAffiliate(ctx context.Context, gameID, affiliateID int64) error {
+	item, err := u.gameRepo.FindAffiliateByID(ctx, affiliateID)
+	if err != nil {
+		return err
+	}
+	if item == nil || item.GameID != gameID {
+		return fmt.Errorf("指定された購入リンクが見つかりませんでした")
+	}
+	return u.gameRepo.DeleteAffiliate(ctx, affiliateID)
+}
+
+func normalizeAffiliateCategory(value string) string {
+	return strings.ToUpper(strings.TrimSpace(value))
+}
+
+func (u *GameUseCase) validateAffiliateInput(category, rawURL string) error {
+	normalizedCategory := normalizeAffiliateCategory(category)
+	if _, ok := validAffiliateCategories[normalizedCategory]; !ok {
+		return fmt.Errorf("カテゴリが不正です")
+	}
+
+	urlValue := strings.TrimSpace(rawURL)
+	if urlValue == "" {
+		return fmt.Errorf("URLは必須です")
+	}
+	parsed, err := url.ParseRequestURI(urlValue)
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
+		return fmt.Errorf("URLの形式が不正です")
+	}
+	return nil
 }
 
 type GameCSVRowInput struct {

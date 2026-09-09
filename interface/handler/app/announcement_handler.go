@@ -1,0 +1,40 @@
+package app
+
+import (
+	"net/http"
+	"strconv"
+	usecaseApp "yutagame-backend/application/usecase/app"
+	"yutagame-backend/interface/handler"
+
+	"github.com/labstack/echo/v4"
+)
+
+type AnnouncementHandler struct {
+	announcementUseCase *usecaseApp.AnnouncementPublicUseCase
+}
+
+func NewAnnouncementHandler(announcementUseCase *usecaseApp.AnnouncementPublicUseCase) *AnnouncementHandler {
+	return &AnnouncementHandler{announcementUseCase: announcementUseCase}
+}
+
+func (h *AnnouncementHandler) GetAll(c echo.Context) error {
+	ctx := c.Request().Context()
+	items, err := h.announcementUseCase.GetPublishedAnnouncements(ctx)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+	}
+	return c.JSON(http.StatusOK, items)
+}
+
+func (h *AnnouncementHandler) GetByID(c echo.Context) error {
+	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+	ctx := c.Request().Context()
+	item, err := h.announcementUseCase.GetPublishedAnnouncementByID(ctx, id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+	}
+	if item == nil {
+		return c.JSON(http.StatusNotFound, handler.ErrorResponse{Message: "指定されたお知らせが見つかりませんでした。"})
+	}
+	return c.JSON(http.StatusOK, item)
+}

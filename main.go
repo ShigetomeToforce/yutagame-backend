@@ -7,6 +7,7 @@ import (
 	"os"
 	usecaseAdmin "yutagame-backend/application/usecase/admin"
 	usecaseApp "yutagame-backend/application/usecase/app"
+	"yutagame-backend/domain/model"
 	"yutagame-backend/infrastructure/database"
 	handlerAdmin "yutagame-backend/interface/handler/admin" // 💡 エイリアスを付けてインポート
 	handlerApp "yutagame-backend/interface/handler/app"
@@ -51,6 +52,10 @@ func main() {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
 
+	if err := db.AutoMigrate(&model.Announcement{}, &model.ContactInquiry{}); err != nil {
+		log.Fatalf("failed to auto migrate: %v", err)
+	}
+
 	// 3. レイヤーの組み立て (Dependency Injection)
 	// --- Repository 層 ---
 	machineRepo := database.NewMachineRepository(db)
@@ -60,6 +65,8 @@ func main() {
 	manufacturerRepo := database.NewManufacturerRepository(db)
 	adminRepo := database.NewAdminRepository(db)
 	userRepo := database.NewUserRepository(db)
+	announcementRepo := database.NewAnnouncementRepository(db)
+	contactRepo := database.NewContactInquiryRepository(db)
 
 	// --- UseCase 層 ---
 	machineUseCase := usecaseAdmin.NewMachineUseCase(machineRepo)
@@ -69,6 +76,8 @@ func main() {
 	manufacturerUseCase := usecaseAdmin.NewManufacturerUseCase(manufacturerRepo)
 	adminUseCase := usecaseAdmin.NewAdminUseCase(adminRepo)
 	userUseCase := usecaseAdmin.NewUserUseCase(userRepo)
+	announcementUseCase := usecaseAdmin.NewAnnouncementUseCase(announcementRepo)
+	contactUseCase := usecaseAdmin.NewContactInquiryUseCase(contactRepo)
 	publicGameUseCase := usecaseApp.NewGamePublicUseCase(
 		gameRepo,
 		machineRepo,
@@ -76,6 +85,9 @@ func main() {
 		manufacturerRepo,
 		keywordRepo,
 	)
+	publicAnnouncementUseCase := usecaseApp.NewAnnouncementPublicUseCase(announcementRepo)
+	publicContactUseCase := usecaseApp.NewContactPublicUseCase(contactRepo)
+	siteUseCase := usecaseApp.NewSiteUseCase(gameRepo, announcementRepo)
 
 	// --- Handler 層 ---
 	machineHandler := handlerAdmin.NewMachineHandler(machineUseCase)
@@ -85,7 +97,12 @@ func main() {
 	manufacturerHandler := handlerAdmin.NewManufacturerHandler(manufacturerUseCase)
 	adminHandler := handlerAdmin.NewAdminHandler(adminUseCase)
 	userHandler := handlerAdmin.NewUserHandler(userUseCase)
+	announcementHandler := handlerAdmin.NewAnnouncementHandler(announcementUseCase)
+	contactInquiryHandler := handlerAdmin.NewContactInquiryHandler(contactUseCase)
 	publicGameHandler := handlerApp.NewGameHandler(publicGameUseCase)
+	publicAnnouncementHandler := handlerApp.NewAnnouncementHandler(publicAnnouncementUseCase)
+	publicContactHandler := handlerApp.NewContactHandler(publicContactUseCase)
+	siteHandler := handlerApp.NewSiteHandler(siteUseCase)
 
 	// 4. Echo インスタンスの生成と共通設定
 	e := echo.New()
@@ -110,6 +127,10 @@ func main() {
 		public := api.Group("/app")
 		{
 			public.GET("/top", publicGameHandler.GetTop)
+			public.GET("/announcements", publicAnnouncementHandler.GetAll)
+			public.GET("/announcements/:id", publicAnnouncementHandler.GetByID)
+			public.POST("/contacts", publicContactHandler.Create)
+			public.GET("/sitemap", siteHandler.GetSitemap)
 			public.GET("/catalog/machines", publicGameHandler.GetMachines)
 			public.GET("/catalog/genres", publicGameHandler.GetGenres)
 			public.GET("/catalog/manufacturers", publicGameHandler.GetManufacturers)
@@ -145,6 +166,10 @@ func main() {
 			adminProtected.POST("/games/import/apply", gameHandler.ApplyImportCSV)
 			adminProtected.POST("/games/:id/image", gameHandler.UploadImage)
 			adminProtected.DELETE("/games/:id/image", gameHandler.DeleteImage)
+			adminProtected.GET("/games/:id/affiliates", gameHandler.ListAffiliates)
+			adminProtected.POST("/games/:id/affiliates", gameHandler.CreateAffiliate)
+			adminProtected.PUT("/games/:id/affiliates/:affiliateId", gameHandler.UpdateAffiliate)
+			adminProtected.DELETE("/games/:id/affiliates/:affiliateId", gameHandler.DeleteAffiliate)
 
 			// 💻 機種管理
 			adminProtected.GET("/machines", machineHandler.GetAll)
@@ -169,6 +194,17 @@ func main() {
 			adminProtected.POST("/keywords/export", keywordHandler.ExportCSV)
 			adminProtected.POST("/keywords/import/preview", keywordHandler.PreviewImportCSV)
 			adminProtected.POST("/keywords/import/apply", keywordHandler.ApplyImportCSV)
+
+			adminProtected.GET("/announcements", announcementHandler.GetAll)
+			adminProtected.GET("/announcements/:id", announcementHandler.GetByID)
+			adminProtected.POST("/announcements", announcementHandler.Create)
+			adminProtected.PUT("/announcements/:id", announcementHandler.Update)
+			adminProtected.DELETE("/announcements/:id", announcementHandler.Delete)
+
+			adminProtected.GET("/contacts", contactInquiryHandler.GetAll)
+			adminProtected.GET("/contacts/:id", contactInquiryHandler.GetByID)
+			adminProtected.PUT("/contacts/:id", contactInquiryHandler.Update)
+			adminProtected.DELETE("/contacts/:id", contactInquiryHandler.Delete)
 
 			// 🧬 ジャンル管理
 			adminProtected.GET("/genres", genreHandler.GetAll)

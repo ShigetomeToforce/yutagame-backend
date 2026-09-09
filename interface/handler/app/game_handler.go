@@ -63,7 +63,7 @@ func (h *GameHandler) GetKeywords(c echo.Context) error {
 }
 
 func (h *GameHandler) GetTop(c echo.Context) error {
-	releaseLimit := parseLimit(c.QueryParam("releaseLimit"), 10)
+	releaseLimit := parseLimit(c.QueryParam("releaseLimit"), 5)
 	recentLimit := parseLimit(c.QueryParam("recentLimit"), 8)
 	randomLimit := parseLimit(c.QueryParam("randomLimit"), 8)
 

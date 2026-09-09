@@ -33,9 +33,10 @@ type GameListFilter struct {
 }
 
 type TopContents struct {
-	ReleaseToday    []model.Game `json:"releaseToday"`
-	RecentlyUpdated []model.Game `json:"recentlyUpdated"`
-	RandomPicks     []model.Game `json:"randomPicks"`
+	ReleaseToday     []model.Game `json:"releaseToday"`
+	RecentlyReleased []model.Game `json:"recentlyReleased"`
+	RecentlyUpdated  []model.Game `json:"recentlyUpdated"`
+	RandomPicks      []model.Game `json:"randomPicks"`
 }
 
 type GamePublicUseCase struct {
@@ -217,6 +218,11 @@ func (u *GamePublicUseCase) GetTopContents(ctx context.Context, releaseLimit, re
 		return nil, err
 	}
 
+	recentlyReleased, err := u.gameRepo.FindRecentlyReleased(ctx, recentLimit)
+	if err != nil {
+		return nil, err
+	}
+
 	recentlyUpdated, err := u.gameRepo.FindRecentlyUpdated(ctx, recentLimit)
 	if err != nil {
 		return nil, err
@@ -228,8 +234,9 @@ func (u *GamePublicUseCase) GetTopContents(ctx context.Context, releaseLimit, re
 	}
 
 	return &TopContents{
-		ReleaseToday:    releaseToday,
-		RecentlyUpdated: recentlyUpdated,
-		RandomPicks:     randomPicks,
+		ReleaseToday:     releaseToday,
+		RecentlyReleased: recentlyReleased,
+		RecentlyUpdated:  recentlyUpdated,
+		RandomPicks:      randomPicks,
 	}, nil
 }

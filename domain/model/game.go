@@ -32,5 +32,6 @@ type Game struct {
 	Genre        *Genre        `gorm:"foreignKey:GenreID;" json:"genre,omitempty"`
 
 	// 💡 凄まじいポイント：GORMに「game_keywordsという中間テーブルを使って、紐づくKeywordsを全自動でガッチャンコしてね」と1行で命令します
-	Keywords []Keyword `gorm:"many2many:game_keywords;" json:"keywords"`
+	Keywords   []Keyword       `gorm:"many2many:game_keywords;" json:"keywords"`
+	Affiliates []GameAffiliate `gorm:"foreignKey:GameID;constraint:OnDelete:CASCADE;" json:"affiliates,omitempty"`
 }

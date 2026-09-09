@@ -3,8 +3,9 @@ package database
 import (
 	"context"
 	"errors"
-	"fmt"
+	"math/rand"
 	"sort"
+	"time"
 	"yutagame-backend/domain/model"
 
 	"gorm.io/gorm"
@@ -45,6 +46,7 @@ func (r *GameRepository) FindByID(ctx context.Context, id int64) (*model.Game, e
 		Preload("Machine").
 		Preload("Genre").
 		Preload("Keywords").
+		Preload("Affiliates").
 		First(&game, id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
@@ -60,6 +62,7 @@ func (r *GameRepository) FindByCode(ctx context.Context, code string) (*model.Ga
 		Preload("Machine").
 		Preload("Genre").
 		Preload("Keywords").
+		Preload("Affiliates").
 		Where("code = ?", code).
 		First(&game).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -76,6 +79,7 @@ func (r *GameRepository) FindAll(ctx context.Context) ([]model.Game, error) {
 		Preload("Machine").
 		Preload("Genre").
 		Preload("Keywords").
+		Preload("Affiliates").
 		Order("id asc")
 	err := query.Find(&games).Error
 	if err != nil {
@@ -116,7 +120,8 @@ func (r *GameRepository) FindAllWithPagination(
 		return db.Preload("Manufacturer").
 			Preload("Machine").
 			Preload("Genre").
-			Preload("Keywords")
+			Preload("Keywords").
+			Preload("Affiliates")
 	}
 	return ExecuteFindWithPagination[model.Game](
 		ctx, r.db, limit, offset, "release_date asc", modifier, whereQueries...)
@@ -127,17 +132,98 @@ func (r *GameRepository) CountAll(ctx context.Context, whereQueries ...func(*gor
 	return ExecuteCount[model.Game](ctx, r.db, whereQueries...)
 }
 
-// FindReleasedOnMonthDay 指定された月日と一致する発売日のゲームを取得する
+// FindReleasedOnMonthDay 指定日を起点に、同月日のゲームを優先しつつ、
+// 足りない分は翌日以降の近い発売日順で補完して取得する
 func (r *GameRepository) FindReleasedOnMonthDay(ctx context.Context, month, day, limit int) ([]model.Game, error) {
+	if limit < 1 {
+		return []model.Game{}, nil
+	}
+
 	var games []model.Game
-	md := fmt.Sprintf("%02d-%02d", month, day)
 	err := r.db.WithContext(ctx).
 		Preload("Manufacturer").
 		Preload("Machine").
 		Preload("Genre").
 		Preload("Keywords").
-		Where("DATE_FORMAT(release_date, '%m-%d') = ?", md).
-		Order("release_date asc").
+		Preload("Affiliates").
+		Order("release_date asc, id asc").
+		Find(&games).Error
+	if err != nil {
+		return nil, err
+	}
+
+	const calendarYear = 2000
+	target := time.Date(calendarYear, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+	base := time.Date(calendarYear, time.January, 1, 0, 0, 0, 0, time.UTC)
+	daysInYear := int(time.Date(calendarYear+1, time.January, 1, 0, 0, 0, 0, time.UTC).Sub(base).Hours() / 24)
+
+	groupMap := map[int][]model.Game{}
+	for _, game := range games {
+		gameDate := time.Date(calendarYear, game.ReleaseDate.Month(), game.ReleaseDate.Day(), 0, 0, 0, 0, time.UTC)
+		distance := int(gameDate.Sub(target).Hours() / 24)
+		if distance < 0 {
+			distance += daysInYear
+		}
+		groupMap[distance] = append(groupMap[distance], game)
+	}
+
+	distances := make([]int, 0, len(groupMap))
+	for distance := range groupMap {
+		distances = append(distances, distance)
+	}
+	sort.Ints(distances)
+
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	result := make([]model.Game, 0, limit)
+	for _, distance := range distances {
+		group := groupMap[distance]
+		if distance == 0 {
+			rng.Shuffle(len(group), func(i, j int) {
+				group[i], group[j] = group[j], group[i]
+			})
+		} else {
+			sort.Slice(group, func(i, j int) bool {
+				if group[i].ReleaseDate.Equal(group[j].ReleaseDate) {
+					return group[i].ID > group[j].ID
+				}
+				return group[i].ReleaseDate.After(group[j].ReleaseDate)
+			})
+		}
+
+		if distance == 0 {
+			result = append(result, group...)
+			if len(result) >= limit {
+				return result, nil
+			}
+			continue
+		}
+
+		remaining := limit - len(result)
+		if remaining <= 0 {
+			break
+		}
+		if len(group) > remaining {
+			group = group[:remaining]
+		}
+		result = append(result, group...)
+		if len(result) >= limit {
+			break
+		}
+	}
+
+	return result, nil
+}
+
+// FindRecentlyReleased 発売日が新しいゲームを取得する
+func (r *GameRepository) FindRecentlyReleased(ctx context.Context, limit int) ([]model.Game, error) {
+	var games []model.Game
+	err := r.db.WithContext(ctx).
+		Preload("Manufacturer").
+		Preload("Machine").
+		Preload("Genre").
+		Preload("Keywords").
+		Preload("Affiliates").
+		Order("release_date desc, id desc").
 		Limit(limit).
 		Find(&games).Error
 	if err != nil {
@@ -146,7 +232,7 @@ func (r *GameRepository) FindReleasedOnMonthDay(ctx context.Context, month, day,
 	return games, nil
 }
 
-// FindRecentlyUpdated 更新日時が新しいゲームを取得する
+// FindRecentlyUpdated 登録日が新しいゲームを取得する
 func (r *GameRepository) FindRecentlyUpdated(ctx context.Context, limit int) ([]model.Game, error) {
 	var games []model.Game
 	err := r.db.WithContext(ctx).
@@ -154,7 +240,8 @@ func (r *GameRepository) FindRecentlyUpdated(ctx context.Context, limit int) ([]
 		Preload("Machine").
 		Preload("Genre").
 		Preload("Keywords").
-		Order("updated_at desc").
+		Preload("Affiliates").
+		Order("created_at desc, id desc").
 		Limit(limit).
 		Find(&games).Error
 	if err != nil {
@@ -171,6 +258,7 @@ func (r *GameRepository) FindRandom(ctx context.Context, limit int) ([]model.Gam
 		Preload("Machine").
 		Preload("Genre").
 		Preload("Keywords").
+		Preload("Affiliates").
 		Order("RAND()").
 		Limit(limit).
 		Find(&games).Error
@@ -178,6 +266,15 @@ func (r *GameRepository) FindRandom(ctx context.Context, limit int) ([]model.Gam
 		return nil, err
 	}
 	return games, nil
+}
+
+func (r *GameRepository) FindAllCodes(ctx context.Context) ([]string, error) {
+	var codes []string
+	err := r.db.WithContext(ctx).
+		Model(&model.Game{}).
+		Order("id asc").
+		Pluck("code", &codes).Error
+	return codes, err
 }
 
 // =========================================================================
@@ -240,4 +337,55 @@ func (r *GameRepository) ReplaceKeywords(ctx context.Context, gameID int64, keyw
 		Model(&model.Game{ID: gameID}).
 		Association("Keywords").
 		Replace(keywords)
+}
+
+func (r *GameRepository) ListAffiliatesByGameID(ctx context.Context, gameID int64) ([]model.GameAffiliate, error) {
+	var items []model.GameAffiliate
+	err := r.db.WithContext(ctx).
+		Where("game_id = ?", gameID).
+		Order("id asc").
+		Find(&items).Error
+	if err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (r *GameRepository) FindAffiliateByID(ctx context.Context, id int64) (*model.GameAffiliate, error) {
+	var item model.GameAffiliate
+	err := r.db.WithContext(ctx).
+		First(&item, id).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &item, nil
+}
+
+func (r *GameRepository) FindAffiliateByGameIDAndCategory(ctx context.Context, gameID int64, category string) (*model.GameAffiliate, error) {
+	var item model.GameAffiliate
+	err := r.db.WithContext(ctx).
+		Where("game_id = ? AND category = ?", gameID, category).
+		First(&item).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &item, nil
+}
+
+func (r *GameRepository) CreateAffiliate(ctx context.Context, item *model.GameAffiliate) error {
+	return r.db.WithContext(ctx).Create(item).Error
+}
+
+func (r *GameRepository) UpdateAffiliate(ctx context.Context, item *model.GameAffiliate) error {
+	return r.db.WithContext(ctx).Save(item).Error
+}
+
+func (r *GameRepository) DeleteAffiliate(ctx context.Context, id int64) error {
+	return r.db.WithContext(ctx).Delete(&model.GameAffiliate{}, id).Error
 }
