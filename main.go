@@ -52,7 +52,7 @@ func main() {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
 
-	if err := db.AutoMigrate(&model.Announcement{}, &model.ContactInquiry{}); err != nil {
+	if err := db.AutoMigrate(&model.Announcement{}, &model.ContactInquiry{}, &model.AccessLog{}, &model.GameFavorite{}); err != nil {
 		log.Fatalf("failed to auto migrate: %v", err)
 	}
 
@@ -67,6 +67,8 @@ func main() {
 	userRepo := database.NewUserRepository(db)
 	announcementRepo := database.NewAnnouncementRepository(db)
 	contactRepo := database.NewContactInquiryRepository(db)
+	accessLogRepo := database.NewAccessLogRepository(db)
+	favoriteRepo := database.NewGameFavoriteRepository(db)
 
 	// --- UseCase 層 ---
 	machineUseCase := usecaseAdmin.NewMachineUseCase(machineRepo)
@@ -78,8 +80,12 @@ func main() {
 	userUseCase := usecaseAdmin.NewUserUseCase(userRepo)
 	announcementUseCase := usecaseAdmin.NewAnnouncementUseCase(announcementRepo)
 	contactUseCase := usecaseAdmin.NewContactInquiryUseCase(contactRepo)
+	accessLogUseCase := usecaseAdmin.NewAccessLogUseCase(accessLogRepo)
+	accessLogPublicUseCase := usecaseApp.NewAccessLogPublicUseCase(accessLogRepo)
+	favoriteUseCase := usecaseApp.NewGameFavoriteUseCase(gameRepo, favoriteRepo)
 	publicGameUseCase := usecaseApp.NewGamePublicUseCase(
 		gameRepo,
+		favoriteRepo,
 		machineRepo,
 		genreRepo,
 		manufacturerRepo,
@@ -99,15 +105,19 @@ func main() {
 	userHandler := handlerAdmin.NewUserHandler(userUseCase)
 	announcementHandler := handlerAdmin.NewAnnouncementHandler(announcementUseCase)
 	contactInquiryHandler := handlerAdmin.NewContactInquiryHandler(contactUseCase)
+	accessLogHandler := handlerAdmin.NewAccessLogHandler(accessLogUseCase)
 	publicGameHandler := handlerApp.NewGameHandler(publicGameUseCase)
+	publicGameFavoriteHandler := handlerApp.NewGameFavoriteHandler(favoriteUseCase)
 	publicAnnouncementHandler := handlerApp.NewAnnouncementHandler(publicAnnouncementUseCase)
 	publicContactHandler := handlerApp.NewContactHandler(publicContactUseCase)
 	siteHandler := handlerApp.NewSiteHandler(siteUseCase)
+	publicAccessLogHandler := handlerApp.NewAccessLogHandler(accessLogPublicUseCase)
 
 	// 4. Echo インスタンスの生成と共通設定
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	e.Use(customMiddleware.AccessLog(accessLogPublicUseCase))
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{"*"},
 		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
@@ -127,6 +137,7 @@ func main() {
 		public := api.Group("/app")
 		{
 			public.GET("/top", publicGameHandler.GetTop)
+			public.POST("/events", publicAccessLogHandler.Create)
 			public.GET("/announcements", publicAnnouncementHandler.GetAll)
 			public.GET("/announcements/:id", publicAnnouncementHandler.GetByID)
 			public.POST("/contacts", publicContactHandler.Create)
@@ -136,6 +147,8 @@ func main() {
 			public.GET("/catalog/manufacturers", publicGameHandler.GetManufacturers)
 			public.GET("/keywords", publicGameHandler.GetKeywords)
 			public.GET("/games", publicGameHandler.Search)
+			public.GET("/games/:code/favorite", publicGameFavoriteHandler.GetStatus)
+			public.POST("/games/:code/favorite", publicGameFavoriteHandler.Push)
 			public.GET("/games/:code", publicGameHandler.GetByCode)
 		}
 
@@ -205,6 +218,9 @@ func main() {
 			adminProtected.GET("/contacts/:id", contactInquiryHandler.GetByID)
 			adminProtected.PUT("/contacts/:id", contactInquiryHandler.Update)
 			adminProtected.DELETE("/contacts/:id", contactInquiryHandler.Delete)
+
+			adminProtected.GET("/access-logs", accessLogHandler.GetAll)
+			adminProtected.GET("/access-logs/dashboard", accessLogHandler.GetDashboard)
 
 			// 🧬 ジャンル管理
 			adminProtected.GET("/genres", genreHandler.GetAll)

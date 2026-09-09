@@ -33,14 +33,21 @@ type GameListFilter struct {
 }
 
 type TopContents struct {
-	ReleaseToday     []model.Game `json:"releaseToday"`
-	RecentlyReleased []model.Game `json:"recentlyReleased"`
-	RecentlyUpdated  []model.Game `json:"recentlyUpdated"`
-	RandomPicks      []model.Game `json:"randomPicks"`
+	ReleaseToday     []model.Game          `json:"releaseToday"`
+	RecentlyReleased []model.Game          `json:"recentlyReleased"`
+	RecentlyUpdated  []model.Game          `json:"recentlyUpdated"`
+	RandomPicks      []model.Game          `json:"randomPicks"`
+	FavoriteRanking  []FavoriteRankingItem `json:"favoriteRanking"`
+}
+
+type FavoriteRankingItem struct {
+	Game  model.Game `json:"game"`
+	Count int64      `json:"count"`
 }
 
 type GamePublicUseCase struct {
 	gameRepo         *database.GameRepository
+	favoriteRepo     *database.GameFavoriteRepository
 	machineRepo      *database.MachineRepository
 	genreRepo        *database.GenreRepository
 	manufacturerRepo *database.ManufacturerRepository
@@ -49,6 +56,7 @@ type GamePublicUseCase struct {
 
 func NewGamePublicUseCase(
 	gameRepo *database.GameRepository,
+	favoriteRepo *database.GameFavoriteRepository,
 	machineRepo *database.MachineRepository,
 	genreRepo *database.GenreRepository,
 	manufacturerRepo *database.ManufacturerRepository,
@@ -56,6 +64,7 @@ func NewGamePublicUseCase(
 ) *GamePublicUseCase {
 	return &GamePublicUseCase{
 		gameRepo:         gameRepo,
+		favoriteRepo:     favoriteRepo,
 		machineRepo:      machineRepo,
 		genreRepo:        genreRepo,
 		manufacturerRepo: manufacturerRepo,
@@ -233,10 +242,48 @@ func (u *GamePublicUseCase) GetTopContents(ctx context.Context, releaseLimit, re
 		return nil, err
 	}
 
+	countsByID := map[int64]int64{}
+	rankingRows, err := u.favoriteRepo.FindTopGameIDsByCount(ctx, randomLimit)
+	if err != nil {
+		return nil, err
+	}
+
+	rankedGames := make([]model.Game, 0, len(rankingRows))
+	if len(rankingRows) > 0 {
+		ids := make([]int64, 0, len(rankingRows))
+		for _, row := range rankingRows {
+			ids = append(ids, row.GameID)
+			countsByID[row.GameID] = row.Count
+		}
+
+		games, err := u.gameRepo.FindByIDsWithRelations(ctx, ids)
+		if err != nil {
+			return nil, err
+		}
+		gamesByID := make(map[int64]model.Game, len(games))
+		for _, game := range games {
+			gamesByID[game.ID] = game
+		}
+		for _, row := range rankingRows {
+			if game, ok := gamesByID[row.GameID]; ok {
+				rankedGames = append(rankedGames, game)
+			}
+		}
+	}
+
+	favoriteRanking := make([]FavoriteRankingItem, 0, len(rankedGames))
+	for _, game := range rankedGames {
+		favoriteRanking = append(favoriteRanking, FavoriteRankingItem{
+			Game:  game,
+			Count: countsByID[game.ID],
+		})
+	}
+
 	return &TopContents{
 		ReleaseToday:     releaseToday,
 		RecentlyReleased: recentlyReleased,
 		RecentlyUpdated:  recentlyUpdated,
 		RandomPicks:      randomPicks,
+		FavoriteRanking:  favoriteRanking,
 	}, nil
 }

@@ -110,6 +110,32 @@ func (r *GameRepository) FindByIDs(ctx context.Context, ids []int64) ([]model.Ga
 	return games, nil
 }
 
+func (r *GameRepository) FindByIDsWithRelations(ctx context.Context, ids []int64) ([]model.Game, error) {
+	if len(ids) == 0 {
+		return []model.Game{}, nil
+	}
+
+	var games []model.Game
+	err := r.db.WithContext(ctx).
+		Preload("Manufacturer").
+		Preload("Machine").
+		Preload("Genre").
+		Preload("Keywords").
+		Preload("Affiliates").
+		Where("id IN ?", ids).
+		Order("id asc").
+		Find(&games).Error
+	if err != nil {
+		return nil, err
+	}
+
+	sort.Slice(games, func(i, j int) bool {
+		return games[i].ID < games[j].ID
+	})
+
+	return games, nil
+}
+
 // FindAllWithPagination 指定された件数（limit）と開始位置（offset）に応じて、ゲーム情報を発売日昇順で取得する
 func (r *GameRepository) FindAllWithPagination(
 	ctx context.Context,
