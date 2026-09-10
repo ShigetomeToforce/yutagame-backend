@@ -11,7 +11,8 @@ import (
 )
 
 type GameHandler struct {
-	gameUseCase *usecaseApp.GamePublicUseCase
+	gameUseCase         *usecaseApp.GamePublicUseCase
+	analyticsLogUseCase *usecaseApp.AnalyticsLogUseCase
 }
 
 type PaginatedGameResponse struct {
@@ -22,8 +23,33 @@ type PaginatedGameResponse struct {
 	Limit      int   `json:"limit"`
 }
 
-func NewGameHandler(gameUseCase *usecaseApp.GamePublicUseCase) *GameHandler {
-	return &GameHandler{gameUseCase: gameUseCase}
+func NewGameHandler(
+	gameUseCase *usecaseApp.GamePublicUseCase,
+	analyticsLogUseCase *usecaseApp.AnalyticsLogUseCase,
+) *GameHandler {
+	return &GameHandler{gameUseCase: gameUseCase, analyticsLogUseCase: analyticsLogUseCase}
+}
+
+func getCookieValue(rawCookie, key string) string {
+	parts := strings.Split(rawCookie, ";")
+	for _, part := range parts {
+		pair := strings.SplitN(strings.TrimSpace(part), "=", 2)
+		if len(pair) != 2 {
+			continue
+		}
+		if pair[0] == key {
+			return pair[1]
+		}
+	}
+	return ""
+}
+
+func resolveVisitorID(c echo.Context) string {
+	visitorID := strings.TrimSpace(c.QueryParam("visitorId"))
+	if visitorID != "" {
+		return visitorID
+	}
+	return strings.TrimSpace(getCookieValue(c.Request().Header.Get("Cookie"), "visitor_id"))
 }
 
 func (h *GameHandler) GetMachines(c echo.Context) error {
@@ -94,6 +120,20 @@ func (h *GameHandler) Search(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
 	}
 
+	if h.analyticsLogUseCase != nil {
+		if logErr := h.analyticsLogUseCase.RecordSearch(c.Request().Context(), usecaseApp.SearchLogInput{
+			VisitorID:        resolveVisitorID(c),
+			IP:               c.RealIP(),
+			MachineCode:      filter.MachineCode,
+			ManufacturerCode: filter.ManufacturerCode,
+			GenreCode:        filter.GenreCode,
+			KeywordCode:      filter.KeywordCode,
+			SearchWord:       filter.SearchWord,
+		}); logErr != nil {
+			c.Logger().Warnf("search log write failed: %v", logErr)
+		}
+	}
+
 	return c.JSON(http.StatusOK, PaginatedGameResponse{
 		Data:       games,
 		TotalCount: totalCount,
@@ -116,6 +156,16 @@ func (h *GameHandler) GetByCode(c echo.Context) error {
 	}
 	if game == nil {
 		return c.JSON(http.StatusNotFound, handler.ErrorResponse{Message: "指定されたゲームが見つかりませんでした。"})
+	}
+
+	if h.analyticsLogUseCase != nil {
+		if logErr := h.analyticsLogUseCase.RecordGameView(c.Request().Context(), usecaseApp.GameViewLogInput{
+			VisitorID: resolveVisitorID(c),
+			IP:        c.RealIP(),
+			GameCode:  game.Code,
+		}); logErr != nil {
+			c.Logger().Warnf("game view log write failed: %v", logErr)
+		}
 	}
 
 	return c.JSON(http.StatusOK, game)

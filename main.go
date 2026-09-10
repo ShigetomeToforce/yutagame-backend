@@ -56,8 +56,22 @@ func main() {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
 
-	if err := db.AutoMigrate(&model.Announcement{}, &model.ContactInquiry{}, &model.AccessLog{}, &model.GameFavorite{}); err != nil {
+	if err := db.Exec("DROP TABLE IF EXISTS access_logs").Error; err != nil {
+		log.Fatalf("failed to drop legacy access_logs: %v", err)
+	}
+
+	if err := db.AutoMigrate(
+		&model.Announcement{},
+		&model.ContactInquiry{},
+		&model.GameFavorite{},
+		&model.SearchLog{},
+		&model.GameViewLog{},
+	); err != nil {
 		log.Fatalf("failed to auto migrate: %v", err)
+	}
+
+	if err := database.DropLegacyAnalyticsColumns(db); err != nil {
+		log.Fatalf("failed to drop legacy analytics columns: %v", err)
 	}
 
 	// 3. レイヤーの組み立て (Dependency Injection)
@@ -71,7 +85,8 @@ func main() {
 	userRepo := database.NewUserRepository(db)
 	announcementRepo := database.NewAnnouncementRepository(db)
 	contactRepo := database.NewContactInquiryRepository(db)
-	accessLogRepo := database.NewAccessLogRepository(db)
+	searchLogRepo := database.NewSearchLogRepository(db)
+	gameViewLogRepo := database.NewGameViewLogRepository(db)
 	favoriteRepo := database.NewGameFavoriteRepository(db)
 
 	// --- UseCase 層 ---
@@ -84,8 +99,17 @@ func main() {
 	userUseCase := usecaseAdmin.NewUserUseCase(userRepo)
 	announcementUseCase := usecaseAdmin.NewAnnouncementUseCase(announcementRepo)
 	contactUseCase := usecaseAdmin.NewContactInquiryUseCase(contactRepo)
-	accessLogUseCase := usecaseAdmin.NewAccessLogUseCase(accessLogRepo)
-	accessLogPublicUseCase := usecaseApp.NewAccessLogPublicUseCase(accessLogRepo)
+	accessLogUseCase := usecaseAdmin.NewAccessLogUseCase(
+		searchLogRepo,
+		gameViewLogRepo,
+		contactRepo,
+		machineRepo,
+		manufacturerRepo,
+		genreRepo,
+		keywordRepo,
+		gameRepo,
+	)
+	analyticsLogUseCase := usecaseApp.NewAnalyticsLogUseCase(searchLogRepo, gameViewLogRepo)
 	favoriteUseCase := usecaseApp.NewGameFavoriteUseCase(gameRepo, favoriteRepo)
 	publicGameUseCase := usecaseApp.NewGamePublicUseCase(
 		gameRepo,
@@ -111,12 +135,11 @@ func main() {
 	contactInquiryHandler := handlerAdmin.NewContactInquiryHandler(contactUseCase)
 	accessLogHandler := handlerAdmin.NewAccessLogHandler(accessLogUseCase)
 	logFileHandler := handlerAdmin.NewLogFileHandler(backendFileLogger)
-	publicGameHandler := handlerApp.NewGameHandler(publicGameUseCase)
+	publicGameHandler := handlerApp.NewGameHandler(publicGameUseCase, analyticsLogUseCase)
 	publicGameFavoriteHandler := handlerApp.NewGameFavoriteHandler(favoriteUseCase)
 	publicAnnouncementHandler := handlerApp.NewAnnouncementHandler(publicAnnouncementUseCase)
 	publicContactHandler := handlerApp.NewContactHandler(publicContactUseCase)
 	siteHandler := handlerApp.NewSiteHandler(siteUseCase)
-	publicAccessLogHandler := handlerApp.NewAccessLogHandler(accessLogPublicUseCase)
 
 	// 4. Echo インスタンスの生成と共通設定
 	e := echo.New()
@@ -142,7 +165,6 @@ func main() {
 		public := api.Group("/app")
 		{
 			public.GET("/top", publicGameHandler.GetTop)
-			public.POST("/events", publicAccessLogHandler.Create)
 			public.GET("/announcements", publicAnnouncementHandler.GetAll)
 			public.GET("/announcements/:id", publicAnnouncementHandler.GetByID)
 			public.POST("/contacts", publicContactHandler.Create)
@@ -224,8 +246,12 @@ func main() {
 			adminProtected.PUT("/contacts/:id", contactInquiryHandler.Update)
 			adminProtected.DELETE("/contacts/:id", contactInquiryHandler.Delete)
 
-			adminProtected.GET("/access-logs", accessLogHandler.GetAll)
 			adminProtected.GET("/access-logs/dashboard", accessLogHandler.GetDashboard)
+			adminProtected.GET("/access-logs/monthly-table", accessLogHandler.GetMonthlyTable)
+			adminProtected.GET("/access-logs/search-breakdown", accessLogHandler.GetSearchBreakdown)
+			adminProtected.GET("/access-logs/machine-searches", accessLogHandler.GetMachineSearchDashboard)
+			adminProtected.GET("/access-logs/search-rankings", accessLogHandler.GetSearchRankingDashboard)
+			adminProtected.GET("/access-logs/game-views", accessLogHandler.GetGameViewDashboard)
 			adminProtected.GET("/log-files", logFileHandler.GetAll)
 
 			// 🧬 ジャンル管理

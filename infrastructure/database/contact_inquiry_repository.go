@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"errors"
+	"time"
 	"yutagame-backend/domain/model"
 
 	"gorm.io/gorm"
@@ -45,6 +46,15 @@ func (r *ContactInquiryRepository) FindAllWithPagination(
 
 func (r *ContactInquiryRepository) CountAll(ctx context.Context, whereQueries ...func(*gorm.DB) *gorm.DB) (int64, error) {
 	return ExecuteCount[model.ContactInquiry](ctx, r.db, whereQueries...)
+}
+
+func (r *ContactInquiryRepository) CountRange(ctx context.Context, from, to time.Time) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&model.ContactInquiry{}).
+		Where("created_at >= ? AND created_at < ?", from, to).
+		Count(&count).Error
+	return count, err
 }
 
 func (r *ContactInquiryRepository) Update(ctx context.Context, inquiry *model.ContactInquiry) error {
