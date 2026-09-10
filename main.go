@@ -72,6 +72,7 @@ func main() {
 		&model.GameViewLog{},
 		&model.ContentAccessLog{},
 		&model.Banner{},
+		&model.PurchaseCandidate{},
 	); err != nil {
 		log.Fatalf("failed to auto migrate: %v", err)
 	}
@@ -148,6 +149,7 @@ func main() {
 	favoriteRepo := database.NewGameFavoriteRepository(db)
 	rankingRepo := database.NewGameRankingRepository(db)
 	bannerRepo := database.NewBannerRepository(db)
+	purchaseCandidateRepo := database.NewPurchaseCandidateRepository(db)
 
 	// --- UseCase 層 ---
 	machineUseCase := usecaseAdmin.NewMachineUseCase(machineRepo)
@@ -174,6 +176,7 @@ func main() {
 	)
 	rankingUseCase := usecaseAdmin.NewGameRankingUseCase(gameRepo, rankingRepo)
 	bannerUseCase := usecaseAdmin.NewBannerUseCase(bannerRepo, contentAccessLogRepo)
+	purchaseCandidateUseCase := usecaseAdmin.NewPurchaseCandidateUseCase(purchaseCandidateRepo)
 	analyticsLogUseCase := usecaseApp.NewAnalyticsLogUseCase(searchLogRepo, gameViewLogRepo, contentAccessLogRepo)
 	contactNotifier := mail.NewSMTPContactNotifierFromEnv()
 	favoriteUseCase := usecaseApp.NewGameFavoriteUseCase(gameRepo, favoriteRepo)
@@ -207,6 +210,7 @@ func main() {
 	accessLogHandler := handlerAdmin.NewAccessLogHandler(accessLogUseCase)
 	gameRankingHandler := handlerAdmin.NewGameRankingHandler(rankingUseCase)
 	bannerHandler := handlerAdmin.NewBannerHandler(bannerUseCase)
+	purchaseCandidateHandler := handlerAdmin.NewPurchaseCandidateHandler(purchaseCandidateUseCase)
 	logFileHandler := handlerAdmin.NewLogFileHandler(backendFileLogger)
 	publicGameHandler := handlerApp.NewGameHandler(publicGameUseCase, analyticsLogUseCase)
 	publicGameFavoriteHandler := handlerApp.NewGameFavoriteHandler(favoriteUseCase)
@@ -303,6 +307,15 @@ func main() {
 			adminProtected.POST("/games/:id/affiliates", gameHandler.CreateAffiliate)
 			adminProtected.PUT("/games/:id/affiliates/:affiliateId", gameHandler.UpdateAffiliate)
 			adminProtected.DELETE("/games/:id/affiliates/:affiliateId", gameHandler.DeleteAffiliate)
+
+			adminProtected.GET("/purchase-candidates", purchaseCandidateHandler.GetAll)
+			adminProtected.GET("/purchase-candidates/:id", purchaseCandidateHandler.GetByID)
+			adminProtected.POST("/purchase-candidates", purchaseCandidateHandler.Create)
+			adminProtected.PUT("/purchase-candidates/:id", purchaseCandidateHandler.Update)
+			adminProtected.DELETE("/purchase-candidates/:id", purchaseCandidateHandler.Delete)
+			adminProtected.POST("/purchase-candidates/order", purchaseCandidateHandler.UpdateOrder)
+			adminProtected.POST("/purchase-candidates/:id/image", purchaseCandidateHandler.UploadImage)
+			adminProtected.DELETE("/purchase-candidates/:id/image", purchaseCandidateHandler.DeleteImage)
 
 			// 💻 機種管理
 			adminProtected.GET("/machines", machineHandler.GetAll)
