@@ -171,6 +171,15 @@ func (h *GameHandler) GetByCode(c echo.Context) error {
 	return c.JSON(http.StatusOK, game)
 }
 
+func (h *GameHandler) GetRanking(c echo.Context) error {
+	ctx := c.Request().Context()
+	items, err := h.gameUseCase.GetActiveRanking(ctx)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+	}
+	return c.JSON(http.StatusOK, items)
+}
+
 func parsePositiveInt(raw string, fallback int) int {
 	v, err := strconv.Atoi(raw)
 	if err != nil || v < 1 {

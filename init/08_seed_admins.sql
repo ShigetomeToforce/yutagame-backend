@@ -16,12 +16,13 @@ INSERT INTO `admins` (
 ) VALUES (
     1, 
     'admin@example.com', 
-    '$2a$10$SwIs8SXB.Ji8h7Y5EY3EnOPIKuDVlOpSab2rt2Rb7zcE6chDntE/6', 
+    '$2a$10$53xmr3o2m1Tuxo0IQFfko.Suq4Z426P16q4eStnZ9u4acD0WlyeAq', 
     'デフォルト管理者アカウント', 
     'ADMIN', 
     NOW(), 
     NOW()
 ) ON DUPLICATE KEY UPDATE 
+    `password` = VALUES(`password`),
     `name` = VALUES(`name`),
     `role_type` = VALUES(`role_type`),
     `updated_at` = NOW();

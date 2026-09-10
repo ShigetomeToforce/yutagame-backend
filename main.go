@@ -70,6 +70,34 @@ func main() {
 		log.Fatalf("failed to auto migrate: %v", err)
 	}
 
+	if err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS game_ranking_active_entries (
+			id BIGINT NOT NULL AUTO_INCREMENT,
+			game_id BIGINT NOT NULL,
+			display_rank INT NOT NULL,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			PRIMARY KEY (id),
+			UNIQUE KEY uq_game_ranking_active_game_id (game_id)
+		)
+	`).Error; err != nil {
+		log.Fatalf("failed to create active ranking table: %v", err)
+	}
+
+	if err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS game_ranking_draft_entries (
+			id BIGINT NOT NULL AUTO_INCREMENT,
+			game_id BIGINT NOT NULL,
+			display_rank INT NOT NULL,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			PRIMARY KEY (id),
+			UNIQUE KEY uq_game_ranking_draft_game_id (game_id)
+		)
+	`).Error; err != nil {
+		log.Fatalf("failed to create draft ranking table: %v", err)
+	}
+
 	if err := database.DropLegacyAnalyticsColumns(db); err != nil {
 		log.Fatalf("failed to drop legacy analytics columns: %v", err)
 	}
@@ -88,6 +116,7 @@ func main() {
 	searchLogRepo := database.NewSearchLogRepository(db)
 	gameViewLogRepo := database.NewGameViewLogRepository(db)
 	favoriteRepo := database.NewGameFavoriteRepository(db)
+	rankingRepo := database.NewGameRankingRepository(db)
 
 	// --- UseCase 層 ---
 	machineUseCase := usecaseAdmin.NewMachineUseCase(machineRepo)
@@ -109,6 +138,7 @@ func main() {
 		keywordRepo,
 		gameRepo,
 	)
+	rankingUseCase := usecaseAdmin.NewGameRankingUseCase(gameRepo, rankingRepo)
 	analyticsLogUseCase := usecaseApp.NewAnalyticsLogUseCase(searchLogRepo, gameViewLogRepo)
 	favoriteUseCase := usecaseApp.NewGameFavoriteUseCase(gameRepo, favoriteRepo)
 	publicGameUseCase := usecaseApp.NewGamePublicUseCase(
@@ -118,6 +148,7 @@ func main() {
 		genreRepo,
 		manufacturerRepo,
 		keywordRepo,
+		rankingRepo,
 	)
 	publicAnnouncementUseCase := usecaseApp.NewAnnouncementPublicUseCase(announcementRepo)
 	publicContactUseCase := usecaseApp.NewContactPublicUseCase(contactRepo)
@@ -134,6 +165,7 @@ func main() {
 	announcementHandler := handlerAdmin.NewAnnouncementHandler(announcementUseCase)
 	contactInquiryHandler := handlerAdmin.NewContactInquiryHandler(contactUseCase)
 	accessLogHandler := handlerAdmin.NewAccessLogHandler(accessLogUseCase)
+	gameRankingHandler := handlerAdmin.NewGameRankingHandler(rankingUseCase)
 	logFileHandler := handlerAdmin.NewLogFileHandler(backendFileLogger)
 	publicGameHandler := handlerApp.NewGameHandler(publicGameUseCase, analyticsLogUseCase)
 	publicGameFavoriteHandler := handlerApp.NewGameFavoriteHandler(favoriteUseCase)
@@ -174,6 +206,7 @@ func main() {
 			public.GET("/catalog/manufacturers", publicGameHandler.GetManufacturers)
 			public.GET("/keywords", publicGameHandler.GetKeywords)
 			public.GET("/games", publicGameHandler.Search)
+			public.GET("/rankings", publicGameHandler.GetRanking)
 			public.GET("/games/:code/favorite", publicGameFavoriteHandler.GetStatus)
 			public.POST("/games/:code/favorite", publicGameFavoriteHandler.Push)
 			public.GET("/games/:code", publicGameHandler.GetByCode)
@@ -252,6 +285,11 @@ func main() {
 			adminProtected.GET("/access-logs/machine-searches", accessLogHandler.GetMachineSearchDashboard)
 			adminProtected.GET("/access-logs/search-rankings", accessLogHandler.GetSearchRankingDashboard)
 			adminProtected.GET("/access-logs/game-views", accessLogHandler.GetGameViewDashboard)
+			adminProtected.GET("/rankings", gameRankingHandler.GetCurrent)
+			adminProtected.GET("/rankings/draft", gameRankingHandler.GetDraft)
+			adminProtected.GET("/rankings/active", gameRankingHandler.GetActive)
+			adminProtected.POST("/rankings/draft", gameRankingHandler.SaveDraft)
+			adminProtected.POST("/rankings/publish", gameRankingHandler.Publish)
 			adminProtected.GET("/log-files", logFileHandler.GetAll)
 
 			// 🧬 ジャンル管理

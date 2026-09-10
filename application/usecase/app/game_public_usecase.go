@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 	"yutagame-backend/application/usecase"
+	adminUseCase "yutagame-backend/application/usecase/admin"
 	"yutagame-backend/domain/model"
 	"yutagame-backend/infrastructure/database"
 
@@ -52,6 +53,7 @@ type GamePublicUseCase struct {
 	genreRepo        *database.GenreRepository
 	manufacturerRepo *database.ManufacturerRepository
 	keywordRepo      *database.KeywordRepository
+	rankingRepo      *database.GameRankingRepository
 }
 
 func NewGamePublicUseCase(
@@ -61,6 +63,7 @@ func NewGamePublicUseCase(
 	genreRepo *database.GenreRepository,
 	manufacturerRepo *database.ManufacturerRepository,
 	keywordRepo *database.KeywordRepository,
+	rankingRepo *database.GameRankingRepository,
 ) *GamePublicUseCase {
 	return &GamePublicUseCase{
 		gameRepo:         gameRepo,
@@ -69,6 +72,7 @@ func NewGamePublicUseCase(
 		genreRepo:        genreRepo,
 		manufacturerRepo: manufacturerRepo,
 		keywordRepo:      keywordRepo,
+		rankingRepo:      rankingRepo,
 	}
 }
 
@@ -217,6 +221,13 @@ func (u *GamePublicUseCase) SearchGames(
 
 func (u *GamePublicUseCase) GetGameByCode(ctx context.Context, code string) (*model.Game, error) {
 	return u.gameRepo.FindByCode(ctx, strings.TrimSpace(code))
+}
+
+func (u *GamePublicUseCase) GetActiveRanking(ctx context.Context) ([]adminUseCase.GameRankingPublicItem, error) {
+	if u.rankingRepo == nil {
+		return []adminUseCase.GameRankingPublicItem{}, nil
+	}
+	return adminUseCase.NewGameRankingUseCase(u.gameRepo, u.rankingRepo).GetPublicRanking(ctx)
 }
 
 func (u *GamePublicUseCase) GetTopContents(ctx context.Context, releaseLimit, recentLimit, randomLimit int) (*TopContents, error) {
