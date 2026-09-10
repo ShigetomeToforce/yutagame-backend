@@ -5,6 +5,7 @@ import (
 	"errors"
 	"math/rand"
 	"sort"
+	"strings"
 	"time"
 	"yutagame-backend/domain/model"
 
@@ -151,6 +152,26 @@ func (r *GameRepository) FindAllWithPagination(
 	}
 	return ExecuteFindWithPagination[model.Game](
 		ctx, r.db, limit, offset, "release_date asc", modifier, whereQueries...)
+}
+
+func (r *GameRepository) FindAllWithPaginationByOrder(
+	ctx context.Context,
+	limit, offset int,
+	order string,
+	whereQueries ...func(*gorm.DB) *gorm.DB,
+) ([]model.Game, error) {
+	modifier := func(db *gorm.DB) *gorm.DB {
+		if strings.Contains(order, "game_ranking_active_entries") {
+			db = db.Joins("LEFT JOIN game_ranking_active_entries ON game_ranking_active_entries.game_id = games.id")
+		}
+		return db.Preload("Manufacturer").
+			Preload("Machine").
+			Preload("Genre").
+			Preload("Keywords").
+			Preload("Affiliates")
+	}
+	return ExecuteFindWithPagination[model.Game](
+		ctx, r.db, limit, offset, order, modifier, whereQueries...)
 }
 
 // CountAll ページングの総ページ数計算のため、条件に合致する機種情報の総件数を取得する

@@ -112,6 +112,7 @@ func (h *GameHandler) Search(c echo.Context) error {
 		GenreCode:        c.QueryParam("genreCode"),
 		ManufacturerCode: c.QueryParam("manufacturerCode"),
 		KeywordCode:      c.QueryParam("keywordCode"),
+		Sort:             c.QueryParam("sort"),
 	}
 
 	ctx := c.Request().Context()
@@ -178,6 +179,22 @@ func (h *GameHandler) GetRanking(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
 	}
 	return c.JSON(http.StatusOK, items)
+}
+
+func (h *GameHandler) GetRankingPage(c echo.Context) error {
+	page := parsePositiveInt(c.QueryParam("page"), 1)
+	limit := parseLimit(c.QueryParam("limit"), 20)
+	result, err := h.gameUseCase.GetPublicRankingPage(
+		c.Request().Context(),
+		strings.TrimSpace(c.QueryParam("type")),
+		strings.TrimSpace(c.QueryParam("period")),
+		page,
+		limit,
+	)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+	}
+	return c.JSON(http.StatusOK, result)
 }
 
 func parsePositiveInt(raw string, fallback int) int {

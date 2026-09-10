@@ -57,11 +57,36 @@ func (r *GameRankingRepository) ReplaceDraft(ctx context.Context, orderedGameIDs
 	})
 }
 
-func (r *GameRankingRepository) CopyDraftToActive(ctx context.Context) error {
+func (r *GameRankingRepository) ClearDraft(ctx context.Context) error {
+	return r.db.WithContext(ctx).Where("1 = 1").Delete(&model.GameRankingDraftEntry{}).Error
+}
+
+func (r *GameRankingRepository) PublishDraft(ctx context.Context) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var draftEntries []model.GameRankingDraftEntry
 		if err := tx.Order("display_rank asc, id asc").Find(&draftEntries).Error; err != nil {
 			return err
+		}
+		if len(draftEntries) == 0 {
+			return gorm.ErrRecordNotFound
+		}
+
+		var activeEntries []model.GameRankingActiveEntry
+		if err := tx.Order("display_rank asc, id asc").Find(&activeEntries).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("1 = 1").Delete(&model.GameRankingPreviousEntry{}).Error; err != nil {
+			return err
+		}
+		for _, entry := range activeEntries {
+			if err := tx.Create(&model.GameRankingPreviousEntry{
+				GameID:    entry.GameID,
+				Rank:      entry.Rank,
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			}).Error; err != nil {
+				return err
+			}
 		}
 		if err := tx.Where("1 = 1").Delete(&model.GameRankingActiveEntry{}).Error; err != nil {
 			return err
@@ -76,7 +101,7 @@ func (r *GameRankingRepository) CopyDraftToActive(ctx context.Context) error {
 				return err
 			}
 		}
-		return nil
+		return tx.Where("1 = 1").Delete(&model.GameRankingDraftEntry{}).Error
 	})
 }
 
@@ -92,6 +117,36 @@ func (r *GameRankingRepository) GetActive(ctx context.Context) ([]model.GameRank
 		return nil, err
 	}
 	return entries, nil
+}
+
+func (r *GameRankingRepository) GetActiveRanksByGameID(ctx context.Context) (map[int64]int, error) {
+	var entries []model.GameRankingActiveEntry
+	if err := r.db.WithContext(ctx).
+		Select("game_id", "display_rank").
+		Find(&entries).Error; err != nil {
+		return nil, err
+	}
+
+	ranksByGameID := make(map[int64]int, len(entries))
+	for _, entry := range entries {
+		ranksByGameID[entry.GameID] = entry.Rank
+	}
+	return ranksByGameID, nil
+}
+
+func (r *GameRankingRepository) GetPreviousRanksByGameID(ctx context.Context) (map[int64]int, error) {
+	var entries []model.GameRankingPreviousEntry
+	if err := r.db.WithContext(ctx).
+		Select("game_id", "display_rank").
+		Find(&entries).Error; err != nil {
+		return nil, err
+	}
+
+	ranksByGameID := make(map[int64]int, len(entries))
+	for _, entry := range entries {
+		ranksByGameID[entry.GameID] = entry.Rank
+	}
+	return ranksByGameID, nil
 }
 
 func (r *GameRankingRepository) GetDraft(ctx context.Context) ([]model.GameRankingDraftEntry, error) {

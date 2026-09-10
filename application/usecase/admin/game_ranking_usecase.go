@@ -31,38 +31,24 @@ func NewGameRankingUseCase(gameRepo *database.GameRepository, rankingRepo *datab
 }
 
 func (u *GameRankingUseCase) GetCurrent(ctx context.Context) ([]GameRankingListItem, string, error) {
-	draft, err := u.rankingRepo.GetDraft(ctx)
+	draft, err := u.GetDraft(ctx)
 	if err != nil {
 		return nil, "draft", err
 	}
 	if len(draft) > 0 {
-		items, err := u.mapDraftEntries(draft)
-		return items, "draft", err
+		return draft, "draft", nil
 	}
-
-	active, err := u.rankingRepo.GetActive(ctx)
+	active, err := u.GetActive(ctx)
 	if err != nil {
 		return nil, "active", err
 	}
-	if len(active) > 0 {
-		items, err := u.mapActiveEntries(active)
-		return items, "active", err
-	}
-
-	defaultItems, err := u.GetDefaultOrder(ctx)
-	if err != nil {
-		return nil, "active", err
-	}
-	return defaultItems, "active", nil
+	return active, "active", nil
 }
 
 func (u *GameRankingUseCase) GetDraft(ctx context.Context) ([]GameRankingListItem, error) {
 	entries, err := u.rankingRepo.GetDraft(ctx)
 	if err != nil {
 		return nil, err
-	}
-	if len(entries) == 0 {
-		return u.GetDefaultOrder(ctx)
 	}
 	return u.mapDraftEntries(entries)
 }
@@ -72,19 +58,15 @@ func (u *GameRankingUseCase) GetActive(ctx context.Context) ([]GameRankingListIt
 	if err != nil {
 		return nil, err
 	}
-	if len(entries) == 0 {
-		return u.GetDefaultOrder(ctx)
-	}
 	return u.mapActiveEntries(entries)
 }
 
 func (u *GameRankingUseCase) SaveDraft(ctx context.Context, gameIDs []int64) ([]GameRankingListItem, error) {
-	allGames, err := u.gameRepo.FindAll(ctx)
-	if err != nil {
+	if err := u.ValidateGameIDs(gameIDs); err != nil {
 		return nil, err
 	}
-	order := make([]int64, 0, len(allGames))
-	seen := make(map[int64]struct{}, len(allGames))
+	order := make([]int64, 0, len(gameIDs))
+	seen := make(map[int64]struct{}, len(gameIDs))
 	for _, id := range gameIDs {
 		if _, exists := seen[id]; exists || id <= 0 {
 			continue
@@ -92,21 +74,18 @@ func (u *GameRankingUseCase) SaveDraft(ctx context.Context, gameIDs []int64) ([]
 		order = append(order, id)
 		seen[id] = struct{}{}
 	}
-	database.SortGamesByReleaseDateAsc(allGames)
-	for _, game := range allGames {
-		if _, exists := seen[game.ID]; exists {
-			continue
-		}
-		order = append(order, game.ID)
-	}
 	if err := u.rankingRepo.ReplaceDraft(ctx, order); err != nil {
 		return nil, err
 	}
 	return u.GetDraft(ctx)
 }
 
+func (u *GameRankingUseCase) DiscardDraft(ctx context.Context) error {
+	return u.rankingRepo.ClearDraft(ctx)
+}
+
 func (u *GameRankingUseCase) PublishDraft(ctx context.Context) ([]GameRankingListItem, error) {
-	if err := u.rankingRepo.CopyDraftToActive(ctx); err != nil {
+	if err := u.rankingRepo.PublishDraft(ctx); err != nil {
 		return nil, err
 	}
 	return u.GetActive(ctx)
@@ -222,10 +201,20 @@ func (u *GameRankingUseCase) GetPublicRanking(ctx context.Context) ([]GameRankin
 	if err != nil {
 		return nil, err
 	}
+	previousRanksByGameID, err := u.rankingRepo.GetPreviousRanksByGameID(ctx)
+	if err != nil {
+		return nil, err
+	}
 	result := make([]GameRankingPublicItem, 0, len(items))
 	for _, item := range items {
+		previousRank, exists := previousRanksByGameID[item.GameID]
+		var previousRankPointer *int
+		if exists {
+			previousRankPointer = &previousRank
+		}
 		result = append(result, GameRankingPublicItem{
 			Rank:             item.Rank,
+			PreviousRank:     previousRankPointer,
 			GameID:           item.GameID,
 			Code:             item.Code,
 			Name:             item.Name,
@@ -242,6 +231,7 @@ func (u *GameRankingUseCase) GetPublicRanking(ctx context.Context) ([]GameRankin
 
 type GameRankingPublicItem struct {
 	Rank             int     `json:"rank"`
+	PreviousRank     *int    `json:"previousRank,omitempty"`
 	GameID           int64   `json:"gameId"`
 	Code             string  `json:"code"`
 	Name             string  `json:"name"`

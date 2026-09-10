@@ -31,3 +31,16 @@ type GameRankingDraftEntry struct {
 func (GameRankingDraftEntry) TableName() string {
 	return "game_ranking_draft_entries"
 }
+
+// GameRankingPreviousEntry は直前に公開されていたランキングを保持するテーブル。
+type GameRankingPreviousEntry struct {
+	ID        int64     `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
+	GameID    int64     `gorm:"column:game_id;not null;index:idx_game_ranking_previous_game,unique" json:"gameId"`
+	Rank      int       `gorm:"column:display_rank;not null" json:"rank"`
+	CreatedAt time.Time `gorm:"column:created_at;not null;<-:create" json:"createdAt"`
+	UpdatedAt time.Time `gorm:"column:updated_at;not null" json:"updatedAt"`
+}
+
+func (GameRankingPreviousEntry) TableName() string {
+	return "game_ranking_previous_entries"
+}

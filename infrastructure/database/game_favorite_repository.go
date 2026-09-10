@@ -90,6 +90,27 @@ func (r *GameFavoriteRepository) FindTopGameIDsByCount(ctx context.Context, limi
 	return rows, err
 }
 
+func (r *GameFavoriteRepository) FindTopGameIDsByCountInRange(
+	ctx context.Context,
+	from, to time.Time,
+	limit int,
+) ([]FavoriteRankingRow, error) {
+	if limit < 1 {
+		return []FavoriteRankingRow{}, nil
+	}
+
+	var rows []FavoriteRankingRow
+	err := r.db.WithContext(ctx).
+		Model(&model.GameFavorite{}).
+		Select("game_id, COUNT(*) as count").
+		Where("created_at >= ? AND created_at < ?", from, to).
+		Group("game_id").
+		Order("count desc, game_id desc").
+		Limit(limit).
+		Scan(&rows).Error
+	return rows, err
+}
+
 func (r *GameFavoriteRepository) FindByID(ctx context.Context, id int64) (*model.GameFavorite, error) {
 	var item model.GameFavorite
 	err := r.db.WithContext(ctx).First(&item, id).Error

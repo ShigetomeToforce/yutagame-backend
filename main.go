@@ -98,6 +98,20 @@ func main() {
 		log.Fatalf("failed to create draft ranking table: %v", err)
 	}
 
+	if err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS game_ranking_previous_entries (
+			id BIGINT NOT NULL AUTO_INCREMENT,
+			game_id BIGINT NOT NULL,
+			display_rank INT NOT NULL,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			PRIMARY KEY (id),
+			UNIQUE KEY uq_game_ranking_previous_game_id (game_id)
+		)
+	`).Error; err != nil {
+		log.Fatalf("failed to create previous ranking table: %v", err)
+	}
+
 	if err := database.DropLegacyAnalyticsColumns(db); err != nil {
 		log.Fatalf("failed to drop legacy analytics columns: %v", err)
 	}
@@ -149,6 +163,7 @@ func main() {
 		manufacturerRepo,
 		keywordRepo,
 		rankingRepo,
+		gameViewLogRepo,
 	)
 	publicAnnouncementUseCase := usecaseApp.NewAnnouncementPublicUseCase(announcementRepo)
 	publicContactUseCase := usecaseApp.NewContactPublicUseCase(contactRepo)
@@ -207,6 +222,7 @@ func main() {
 			public.GET("/keywords", publicGameHandler.GetKeywords)
 			public.GET("/games", publicGameHandler.Search)
 			public.GET("/rankings", publicGameHandler.GetRanking)
+			public.GET("/rankings/page", publicGameHandler.GetRankingPage)
 			public.GET("/games/:code/favorite", publicGameFavoriteHandler.GetStatus)
 			public.POST("/games/:code/favorite", publicGameFavoriteHandler.Push)
 			public.GET("/games/:code", publicGameHandler.GetByCode)
@@ -289,6 +305,7 @@ func main() {
 			adminProtected.GET("/rankings/draft", gameRankingHandler.GetDraft)
 			adminProtected.GET("/rankings/active", gameRankingHandler.GetActive)
 			adminProtected.POST("/rankings/draft", gameRankingHandler.SaveDraft)
+			adminProtected.DELETE("/rankings/draft", gameRankingHandler.DiscardDraft)
 			adminProtected.POST("/rankings/publish", gameRankingHandler.Publish)
 			adminProtected.GET("/log-files", logFileHandler.GetAll)
 

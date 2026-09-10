@@ -21,15 +21,18 @@ func NewGameRankingHandler(useCase *admin.GameRankingUseCase) *GameRankingHandle
 }
 
 func (h *GameRankingHandler) GetCurrent(c echo.Context) error {
-	items, mode, err := h.useCase.GetCurrent(c.Request().Context())
+	ctx := c.Request().Context()
+	draft, err := h.useCase.GetDraft(ctx)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+	}
+	active, err := h.useCase.GetActive(ctx)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
 	}
 	return c.JSON(http.StatusOK, map[string]any{
-		"currentMode": mode,
-		"current":     items,
-		"draft":       nil,
-		"active":      nil,
+		"draft":  draft,
+		"active": active,
 	})
 }
 
@@ -59,6 +62,13 @@ func (h *GameRankingHandler) SaveDraft(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
 	}
 	return c.JSON(http.StatusOK, items)
+}
+
+func (h *GameRankingHandler) DiscardDraft(c echo.Context) error {
+	if err := h.useCase.DiscardDraft(c.Request().Context()); err != nil {
+		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+	}
+	return c.NoContent(http.StatusNoContent)
 }
 
 func (h *GameRankingHandler) Publish(c echo.Context) error {
