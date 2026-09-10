@@ -62,6 +62,14 @@ func main() {
 	}
 
 	if err := db.AutoMigrate(
+		&model.Admin{},
+		&model.User{},
+		&model.Manufacturer{},
+		&model.Genre{},
+		&model.Keyword{},
+		&model.Machine{},
+		&model.Game{},
+		&model.GameAffiliate{},
 		&model.Announcement{},
 		&model.Feature{},
 		&model.FeatureGame{},
@@ -75,6 +83,10 @@ func main() {
 		&model.PurchaseCandidate{},
 	); err != nil {
 		log.Fatalf("failed to auto migrate: %v", err)
+	}
+
+	if err := database.EnsureDefaultAdmin(db); err != nil {
+		log.Fatalf("failed to ensure default admin: %v", err)
 	}
 
 	if err := db.Exec("ALTER TABLE features CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci").Error; err != nil {
@@ -128,6 +140,11 @@ func main() {
 
 	if err := database.DropLegacyAnalyticsColumns(db); err != nil {
 		log.Fatalf("failed to drop legacy analytics columns: %v", err)
+	}
+
+	if os.Getenv("MIGRATE_ONLY") == "true" {
+		log.Println("migration completed")
+		return
 	}
 
 	// 3. レイヤーの組み立て (Dependency Injection)
