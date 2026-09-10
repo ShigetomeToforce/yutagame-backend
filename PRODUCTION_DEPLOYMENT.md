@@ -1,10 +1,16 @@
 # Production Deployment Notes
 
+AWSアカウント作成からWeb公開までの具体的な初心者向け手順は
+[AWS_PRODUCTION_BEGINNER_GUIDE.md](AWS_PRODUCTION_BEGINNER_GUIDE.md)
+を参照する。
+
 ## 方針
 
-本番環境ではDockerを使わず、EC2 1台にアプリケーション、MySQL、リバースプロキシを配置する低コスト構成から始める。
+本番環境ではDockerを使わず、EC2
+1台にアプリケーション、MySQL、リバースプロキシを配置する低コスト構成から始める。
 
-ローカル環境は従来どおり `init/` のseedデータを使う。本番環境ではseedデータを流さず、アプリ起動時のAutoMigrateで空DBのテーブルを作成し、デフォルト管理者だけを冪等に投入する。
+ローカル環境は従来どおり `init/`
+のseedデータを使う。本番環境ではseedデータを流さず、アプリ起動時のAutoMigrateで空DBのテーブルを作成し、デフォルト管理者だけを冪等に投入する。
 
 ## 本番DB初期化
 
@@ -22,7 +28,8 @@
 
 未設定時はローカルseedと同じ管理者が作成される。
 
-CI/CDや初回セットアップでマイグレーションだけ実行したい場合は、`MIGRATE_ONLY=true` を指定する。
+CI/CDや初回セットアップでマイグレーションだけ実行したい場合は、`MIGRATE_ONLY=true`
+を指定する。
 
 ```bash
 MIGRATE_ONLY=true ./yutagame-backend
@@ -45,7 +52,8 @@ MIGRATE_ONLY=true ./yutagame-backend
 
 ## SSL
 
-無料で運用するならCaddyが最も簡単。CaddyはLet's Encrypt証明書の取得と更新を自動化できる。
+無料で運用するならCaddyが最も簡単。CaddyはLet's
+Encrypt証明書の取得と更新を自動化できる。
 
 例:
 
@@ -82,7 +90,8 @@ S3側はライフサイクルで30日後Glacier、90日後削除などにする�
 
 ## メール
 
-本番はAmazon SES SMTPを推奨する。低コストで、問い合わせ通知/おすすめゲーム投稿通知の用途に合う。
+本番はAmazon SES
+SMTPを推奨する。低コストで、問い合わせ通知/おすすめゲーム投稿通知の用途に合う。
 
 必要な環境変数:
 
@@ -107,7 +116,8 @@ DBパスワード、JWT secret、SMTPパスワードはGitHubに置かない。
 /etc/yutagame/frontend.env
 ```
 
-権限は `600`、所有者はアプリ実行ユーザーに限定する。より堅くするならAWS Systems Manager Parameter Storeを使う。
+権限は `600`、所有者はアプリ実行ユーザーに限定する。より堅くするならAWS Systems
+Manager Parameter Storeを使う。
 
 ## systemd
 
@@ -130,7 +140,8 @@ User=yutagame
 WantedBy=multi-user.target
 ```
 
-フロントエンドも同様に `deno run -A main.ts` またはビルド成果物をsystemdで起動する。
+フロントエンドも同様に `deno run -A main.ts`
+またはビルド成果物をsystemdで起動する。
 
 ## CI/CD
 
@@ -142,7 +153,8 @@ WantedBy=multi-user.target
 2. EC2へ成果物をrsync/scp
 3. `systemctl restart yutagame-backend yutagame-frontend`
 
-より安全にするならEC2上にSelf-hosted runnerを置く。ただしrunner権限管理に注意する。
+より安全にするならEC2上にSelf-hosted
+runnerを置く。ただしrunner権限管理に注意する。
 
 ## 監視
 
@@ -155,7 +167,8 @@ WantedBy=multi-user.target
 - backend/frontendのsystemd status
 - 5xxログ件数
 
-CloudWatch AgentでCPU/メモリ/ディスクを送り、ディスク80%超過でアラームを設定する。
+CloudWatch
+AgentでCPU/メモリ/ディスクを送り、ディスク80%超過でアラームを設定する。
 
 ## 複数サイト運用
 
@@ -176,11 +189,14 @@ CloudWatch AgentでCPU/メモリ/ディスクを送り、ディスク80%超過�
 - S3 backup bucket
 - IAM role
 
-最初から全部をIaC化しすぎると重くなるため、まずはEC2/Security Group/Route 53/S3だけをOpenTofu化するのが現実的。
+最初から全部をIaC化しすぎると重くなるため、まずはEC2/Security Group/Route
+53/S3だけをOpenTofu化するのが現実的。
 
 ## マイグレーション管理の今後
 
-現在はGORM AutoMigrateで差分反映する。初期運用はこれで十分だが、本番データが増えてきたらSQL migration管理へ移行する。
+現在はGORM
+AutoMigrateで差分反映する。初期運用はこれで十分だが、本番データが増えてきたらSQL
+migration管理へ移行する。
 
 候補:
 
