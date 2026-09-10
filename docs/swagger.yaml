@@ -1,0 +1,1516 @@
+basePath: /api
+definitions:
+  admin.AdminSaveRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        description: 更新処理時、空文字の場合は「変更なし」として取り扱われます
+        type: string
+      roleType:
+        type: string
+    type: object
+  admin.GameSaveRequest:
+    properties:
+      catchCopy:
+        type: string
+      code:
+        type: string
+      genreId:
+        type: integer
+      isClear:
+        type: boolean
+      isFavourite:
+        type: boolean
+      isPlay:
+        type: boolean
+      kana:
+        type: string
+      keywordIds:
+        description: "\U0001F4A1 紐付けるキーワードのID配列"
+        items:
+          type: integer
+        type: array
+      listPrice:
+        type: integer
+      machineId:
+        type: integer
+      manufacturerId:
+        type: integer
+      name:
+        type: string
+      officialSiteUrl:
+        type: string
+      overview:
+        type: string
+      releaseDate:
+        description: フロントからは文字列("YYYY-MM-DD")で受け取る
+        type: string
+      subCatch:
+        type: string
+      subGenre:
+        type: string
+      youtubeUrl:
+        type: string
+    type: object
+  admin.GenreSaveRequest:
+    properties:
+      code:
+        type: string
+      kana:
+        type: string
+      name:
+        type: string
+      overview:
+        type: string
+    type: object
+  admin.KeywordSaveRequest:
+    properties:
+      code:
+        type: string
+      kana:
+        type: string
+      keywordType:
+        type: string
+      name:
+        type: string
+      overview:
+        type: string
+      sortOrder:
+        type: integer
+    type: object
+  admin.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  admin.MachineSaveRequest:
+    properties:
+      abbreviation:
+        type: string
+      code:
+        type: string
+      kana:
+        type: string
+      machineType:
+        type: string
+      manufacturerId:
+        type: integer
+      name:
+        type: string
+      overview:
+        type: string
+      releaseDate:
+        description: フロントからは文字列("YYYY-MM-DD")で受け取る
+        type: string
+      sortOrder:
+        type: integer
+    type: object
+  admin.ManufacturerSaveRequest:
+    properties:
+      code:
+        type: string
+      kana:
+        type: string
+      name:
+        type: string
+      overview:
+        type: string
+    type: object
+  admin.UserSaveRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        description: 更新処理時、空文字の場合は「変更なし」として取り扱われます
+        type: string
+    type: object
+  handler.ErrorResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  handler.PaginatedResponse-model_Admin:
+    properties:
+      data:
+        description: admins や items などのキー名に依存しないよう、汎用的に "data" とします
+        items:
+          $ref: '#/definitions/model.Admin'
+        type: array
+      totalCount:
+        type: integer
+      totalPages:
+        type: integer
+    type: object
+  handler.PaginatedResponse-model_Game:
+    properties:
+      data:
+        description: admins や items などのキー名に依存しないよう、汎用的に "data" とします
+        items:
+          $ref: '#/definitions/model.Game'
+        type: array
+      totalCount:
+        type: integer
+      totalPages:
+        type: integer
+    type: object
+  handler.PaginatedResponse-model_Genre:
+    properties:
+      data:
+        description: admins や items などのキー名に依存しないよう、汎用的に "data" とします
+        items:
+          $ref: '#/definitions/model.Genre'
+        type: array
+      totalCount:
+        type: integer
+      totalPages:
+        type: integer
+    type: object
+  handler.PaginatedResponse-model_Keyword:
+    properties:
+      data:
+        description: admins や items などのキー名に依存しないよう、汎用的に "data" とします
+        items:
+          $ref: '#/definitions/model.Keyword'
+        type: array
+      totalCount:
+        type: integer
+      totalPages:
+        type: integer
+    type: object
+  handler.PaginatedResponse-model_Machine:
+    properties:
+      data:
+        description: admins や items などのキー名に依存しないよう、汎用的に "data" とします
+        items:
+          $ref: '#/definitions/model.Machine'
+        type: array
+      totalCount:
+        type: integer
+      totalPages:
+        type: integer
+    type: object
+  handler.PaginatedResponse-model_Manufacturer:
+    properties:
+      data:
+        description: admins や items などのキー名に依存しないよう、汎用的に "data" とします
+        items:
+          $ref: '#/definitions/model.Manufacturer'
+        type: array
+      totalCount:
+        type: integer
+      totalPages:
+        type: integer
+    type: object
+  handler.PaginatedResponse-model_User:
+    properties:
+      data:
+        description: admins や items などのキー名に依存しないよう、汎用的に "data" とします
+        items:
+          $ref: '#/definitions/model.User'
+        type: array
+      totalCount:
+        type: integer
+      totalPages:
+        type: integer
+    type: object
+  model.Admin:
+    properties:
+      createdAt:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      roleType:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  model.Game:
+    properties:
+      catchCopy:
+        type: string
+      code:
+        type: string
+      createdAt:
+        type: string
+      genre:
+        $ref: '#/definitions/model.Genre'
+      genreId:
+        type: integer
+      id:
+        type: integer
+      imageKey:
+        type: string
+      isClear:
+        type: boolean
+      isFavourite:
+        type: boolean
+      isPlay:
+        type: boolean
+      kana:
+        type: string
+      keywords:
+        description: "\U0001F4A1 凄まじいポイント：GORMに「game_keywordsという中間テーブルを使って、紐づくKeywordsを全自動でガッチャンコしてね」と1行で命令します"
+        items:
+          $ref: '#/definitions/model.Keyword'
+        type: array
+      listPrice:
+        type: integer
+      machine:
+        $ref: '#/definitions/model.Machine'
+      machineId:
+        type: integer
+      manufacturer:
+        allOf:
+        - $ref: '#/definitions/model.Manufacturer'
+        description: "\U0001F4A1 依存関係の解消：GORMの1対多（Belongs To）リレーション群"
+      manufacturerId:
+        type: integer
+      name:
+        type: string
+      officialSiteUrl:
+        type: string
+      overview:
+        type: string
+      releaseDate:
+        type: string
+      subCatch:
+        type: string
+      subGenre:
+        type: string
+      updatedAt:
+        type: string
+      youtubeUrl:
+        type: string
+    type: object
+  model.Genre:
+    properties:
+      code:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: integer
+      imageKey:
+        type: string
+      kana:
+        type: string
+      name:
+        type: string
+      overview:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  model.Keyword:
+    properties:
+      code:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: integer
+      kana:
+        type: string
+      keywordType:
+        type: string
+      name:
+        type: string
+      overview:
+        type: string
+      sortOrder:
+        type: integer
+      updatedAt:
+        type: string
+    type: object
+  model.Machine:
+    properties:
+      abbreviation:
+        type: string
+      code:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: integer
+      imageKey:
+        type: string
+      kana:
+        type: string
+      machineType:
+        type: string
+      manufacturer:
+        allOf:
+        - $ref: '#/definitions/model.Manufacturer'
+        description: "\U0001F4A1 依存関係の解消：GORMに「メーカー情報も連動してね」と教えるリレーション定義"
+      manufacturerId:
+        type: integer
+      name:
+        type: string
+      overview:
+        type: string
+      releaseDate:
+        type: string
+      sortOrder:
+        type: integer
+      updatedAt:
+        type: string
+    type: object
+  model.Manufacturer:
+    properties:
+      code:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: integer
+      imageKey:
+        type: string
+      kana:
+        type: string
+      name:
+        type: string
+      overview:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  model.User:
+    properties:
+      createdAt:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: 所持ゲーム管理システムのバックエンドAPI仕様書
+  title: Yutagame Backend API
+  version: "1.0"
+paths:
+  /admin/admins:
+    get:
+      description: 条件に従いAdminユーザー情報の一覧を取得します。
+      parameters:
+      - description: ページ番号 (指定するとページングモード)
+        in: query
+        name: page
+        type: integer
+      - description: 表示件数 (10, 30, 50)
+        in: query
+        name: limit
+        type: integer
+      - description: 自由入力のテキスト検索（Adminユーザー名）
+        in: query
+        name: q
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: page指定時
+          schema:
+            $ref: '#/definitions/handler.PaginatedResponse-model_Admin'
+      security:
+      - BearerAuth: []
+      summary: Adminユーザー一覧取得
+      tags:
+      - Admins
+    post:
+      consumes:
+      - application/json
+      description: 新しいAdminユーザーフアカウントを作成します。
+      parameters:
+      - description: Adminユーザー登録情報
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/admin.AdminSaveRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Admin'
+        "400":
+          description: バリデーション・重複エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Adminユーザー新規登録
+      tags:
+      - Admins
+  /admin/admins/{id}:
+    delete:
+      description: 指定されたIDのAdminユーザーアカウントを削除します。
+      parameters:
+      - description: AdminユーザーID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Adminユーザー削除
+      tags:
+      - Admins
+    get:
+      description: 指定されたIDのAdminユーザー情報を取得します。
+      parameters:
+      - description: AdminユーザーID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Admin'
+        "404":
+          description: 未検出エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Adminユーザー詳細取得
+      tags:
+      - Admins
+    put:
+      consumes:
+      - application/json
+      description: 指定されたIDのAdminユーザーの名前、メール、パスワード、権限を更新します。
+      parameters:
+      - description: AdminユーザーID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Adminユーザー更新情報
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/admin.AdminSaveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Admin'
+        "400":
+          description: エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Adminユーザー情報更新
+      tags:
+      - Admins
+  /admin/games:
+    get:
+      description: 条件に従いゲーム情報の一覧を取得します。
+      parameters:
+      - description: ページ番号 (指定するとページングモード)
+        in: query
+        name: page
+        type: integer
+      - description: 表示件数 (10, 30, 50)
+        in: query
+        name: limit
+        type: integer
+      - description: 自由入力のテキスト検索（ゲーム名）
+        in: query
+        name: q
+        type: string
+      - collectionFormat: csv
+        description: メーカーIDの複数指定
+        in: query
+        items:
+          type: integer
+        name: manufacturerIDs
+        type: array
+      - collectionFormat: csv
+        description: 機種IDの複数指定
+        in: query
+        items:
+          type: integer
+        name: machineIDs
+        type: array
+      - collectionFormat: csv
+        description: ジャンルIDの複数指定
+        in: query
+        items:
+          type: integer
+        name: genreIDs
+        type: array
+      - collectionFormat: csv
+        description: キーワードIDの複数指定
+        in: query
+        items:
+          type: integer
+        name: keywordIDs
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: page指定時
+          schema:
+            $ref: '#/definitions/handler.PaginatedResponse-model_Game'
+      security:
+      - BearerAuth: []
+      summary: ゲーム一覧取得
+      tags:
+      - Games
+    post:
+      consumes:
+      - application/json
+      description: 新しいゲームの情報をデータベースに登録します。
+      parameters:
+      - description: ゲーム登録情報
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/admin.GameSaveRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Game'
+      security:
+      - BearerAuth: []
+      summary: ゲーム新規登録
+      tags:
+      - Games
+  /admin/games/{id}:
+    delete:
+      description: 指定されたIDのゲーム情報を削除します。
+      parameters:
+      - description: ゲームID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: ゲーム情報削除
+      tags:
+      - Games
+    get:
+      description: 指定されたIDまたはコードのゲーム詳細情報を取得します。
+      parameters:
+      - description: ゲームIDまたはゲームコード
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Game'
+        "404":
+          description: 未検出エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: ゲーム詳細取得
+      tags:
+      - Games
+    put:
+      consumes:
+      - application/json
+      description: 指定されたIDのゲーム情報更新します。
+      parameters:
+      - description: ゲームID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ゲーム更新情報
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/admin.GameSaveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Game'
+        "400":
+          description: エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: ゲーム情報更新
+      tags:
+      - Games
+  /admin/games/code/{code}:
+    get:
+      description: 指定されたコードのゲーム詳細情報を取得します。
+      parameters:
+      - description: ゲームコード
+        in: path
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Game'
+        "404":
+          description: 未検出エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: ゲーム詳細取得（コード指定）
+      tags:
+      - Games
+  /admin/genres:
+    get:
+      parameters:
+      - description: ページ番号 (指定するとページングモード)
+        in: query
+        name: page
+        type: integer
+      - description: 表示件数 (10, 30, 50)
+        in: query
+        name: limit
+        type: integer
+      - description: 検索キーワード (名前またはカナの部分一致)
+        in: query
+        name: q
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: page指定時
+          schema:
+            $ref: '#/definitions/handler.PaginatedResponse-model_Genre'
+      security:
+      - BearerAuth: []
+      summary: ジャンル一覧取得
+      tags:
+      - Genres
+    post:
+      consumes:
+      - application/json
+      description: 新しいジャンルを作成します。
+      parameters:
+      - description: ジャンル登録情報
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/admin.GenreSaveRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Genre'
+        "400":
+          description: バリデーションエラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: ジャンル新規登録
+      tags:
+      - Genres
+  /admin/genres/{id}:
+    delete:
+      description: 指定されたIDのジャンルを削除します。
+      parameters:
+      - description: ジャンルID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: ジャンル削除
+      tags:
+      - Genres
+    get:
+      description: 指定されたIDまたはコードのジャンル情報を取得します。
+      parameters:
+      - description: ジャンルIDまたはジャンルコード
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Genre'
+        "404":
+          description: 未検出エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: ジャンル詳細取得
+      tags:
+      - Genres
+    put:
+      consumes:
+      - application/json
+      description: 指定されたIDのジャンルの情報を更新します。
+      parameters:
+      - description: ジャンルID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ジャンル更新情報
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/admin.GenreSaveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Genre'
+        "400":
+          description: エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: ジャンル情報更新
+      tags:
+      - Genres
+  /admin/genres/code/{code}:
+    get:
+      description: 指定されたコードのジャンル情報を取得します。
+      parameters:
+      - description: ジャンルコード
+        in: path
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Genre'
+        "404":
+          description: 未検出エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: ジャンル詳細取得（コード指定）
+      tags:
+      - Genres
+  /admin/keyword/{id}:
+    put:
+      consumes:
+      - application/json
+      description: 指定されたIDのキーワードの情報を更新します。
+      parameters:
+      - description: キーワードID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: キーワード更新情報
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/admin.KeywordSaveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Keyword'
+        "400":
+          description: エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: キーワード情報更新
+      tags:
+      - Keywords
+  /admin/keywords:
+    get:
+      parameters:
+      - description: ページ番号 (指定するとページングモード)
+        in: query
+        name: page
+        type: integer
+      - description: 表示件数 (10, 30, 50)
+        in: query
+        name: limit
+        type: integer
+      - description: 検索キーワード (名前またはカナの部分一致)
+        in: query
+        name: q
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: page指定時
+          schema:
+            $ref: '#/definitions/handler.PaginatedResponse-model_Keyword'
+      security:
+      - BearerAuth: []
+      summary: キーワード一覧取得
+      tags:
+      - Keywords
+    post:
+      consumes:
+      - application/json
+      description: 新しいキーワードを作成します。
+      parameters:
+      - description: キーワード登録情報
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/admin.KeywordSaveRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Keyword'
+        "400":
+          description: バリデーションエラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: キーワード新規登録
+      tags:
+      - Keywords
+  /admin/keywords/{id}:
+    delete:
+      description: 指定されたIDのキーワードを削除します。
+      parameters:
+      - description: キーワードID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: キーワード削除
+      tags:
+      - Keywords
+    get:
+      description: 指定されたIDまたはコードのキーワード情報を取得します。
+      parameters:
+      - description: キーワードIDまたはキーワードコード
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Keyword'
+        "404":
+          description: 未検出エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: キーワード詳細取得
+      tags:
+      - Keywords
+  /admin/keywords/code/{code}:
+    get:
+      description: 指定されたコードのキーワード情報を取得します。
+      parameters:
+      - description: キーワードコード
+        in: path
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Keyword'
+        "404":
+          description: 未検出エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: キーワード詳細取得（コード指定）
+      tags:
+      - Keywords
+  /admin/login:
+    post:
+      consumes:
+      - application/json
+      description: メールアドレスとパスワードでログインし、JWTトークンを発行します。
+      parameters:
+      - description: ログイン情報
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/admin.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: tokenが返ります
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 認証エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Adminユーザーログイン
+      tags:
+      - Auth
+  /admin/machines:
+    get:
+      description: 登録されているすべてのハードウェア（機種）マスタを取得します。
+      parameters:
+      - description: ページ番号 (指定するとページングモード)
+        in: query
+        name: page
+        type: integer
+      - description: 表示件数 (10, 30, 50)
+        in: query
+        name: limit
+        type: integer
+      - description: 自由入力のテキスト検索（ゲーム名）
+        in: query
+        name: q
+        type: string
+      - collectionFormat: csv
+        description: メーカーIDの複数指定
+        in: query
+        items:
+          type: integer
+        name: manufacturerIDs
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: page指定時
+          schema:
+            $ref: '#/definitions/handler.PaginatedResponse-model_Machine'
+      security:
+      - BearerAuth: []
+      summary: 機種一覧取得
+      tags:
+      - Machines
+    post:
+      consumes:
+      - application/json
+      description: 新しい機種情報をデータベースに登録します。
+      parameters:
+      - description: 機種登録情報
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/admin.MachineSaveRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Machine'
+      security:
+      - BearerAuth: []
+      summary: 機種新規登録
+      tags:
+      - Machines
+  /admin/machines/{id}:
+    delete:
+      description: 指定されたIDの機種情報を削除します。
+      parameters:
+      - description: 機種ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 機種情報削除
+      tags:
+      - Machines
+    get:
+      description: 指定されたIDまたはコードの機種情報を取得します。
+      parameters:
+      - description: 機種IDまたは機種コード
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Machine'
+        "404":
+          description: 未検出エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 機種詳細取得
+      tags:
+      - Machines
+    put:
+      consumes:
+      - application/json
+      description: 指定されたIDの機種情報更新します。
+      parameters:
+      - description: 機種ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ゲーム更新情報
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/admin.MachineSaveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Machine'
+        "400":
+          description: エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 機種情報更新
+      tags:
+      - Machines
+  /admin/machines/code/{code}:
+    get:
+      description: 指定されたコードの機種情報を取得します。
+      parameters:
+      - description: 機種コード
+        in: path
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Machine'
+        "404":
+          description: 未検出エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 機種詳細取得（コード指定）
+      tags:
+      - Machines
+  /admin/manufacturers:
+    get:
+      parameters:
+      - description: ページ番号 (指定するとページングモード)
+        in: query
+        name: page
+        type: integer
+      - description: 表示件数 (10, 30, 50)
+        in: query
+        name: limit
+        type: integer
+      - description: 検索キーワード (名前またはカナの部分一致)
+        in: query
+        name: q
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: page指定時
+          schema:
+            $ref: '#/definitions/handler.PaginatedResponse-model_Manufacturer'
+      security:
+      - BearerAuth: []
+      summary: メーカー一覧取得
+      tags:
+      - Manufacturers
+    post:
+      consumes:
+      - application/json
+      description: 新しいメーカーを作成します。
+      parameters:
+      - description: メーカー情報
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/admin.ManufacturerSaveRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Manufacturer'
+        "400":
+          description: バリデーションエラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: メーカー新規登録
+      tags:
+      - Manufacturers
+  /admin/manufacturers/{id}:
+    delete:
+      description: 指定されたIDのメーカーを削除します。
+      parameters:
+      - description: ジメーカID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: メーカー削除
+      tags:
+      - Manufacturers
+    get:
+      description: 指定されたIDまたはコードのメーカー情報を取得します。
+      parameters:
+      - description: メーカーIDまたはメーカーコード
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Manufacturer'
+        "404":
+          description: 未検出エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: メーカー詳細取得
+      tags:
+      - Manufacturers
+    put:
+      consumes:
+      - application/json
+      description: 指定されたIDのメーカーの情報を更新します。
+      parameters:
+      - description: メーカーID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: メーカー更新情報
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/admin.ManufacturerSaveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Genre'
+        "400":
+          description: エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: メーカー情報更新
+      tags:
+      - Manufacturers
+  /admin/manufacturers/code/{code}:
+    get:
+      description: 指定されたコードのメーカー情報を取得します。
+      parameters:
+      - description: メーカーコード
+        in: path
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Manufacturer'
+        "404":
+          description: 未検出エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: メーカー詳細取得（コード指定）
+      tags:
+      - Manufacturers
+  /admin/users:
+    get:
+      description: 条件に従いユーザー情報の一覧を取得します。
+      parameters:
+      - description: ページ番号 (指定するとページングモード)
+        in: query
+        name: page
+        type: integer
+      - description: 表示件数 (10, 30, 50)
+        in: query
+        name: limit
+        type: integer
+      - description: 自由入力のテキスト検索（Adminユーザー名）
+        in: query
+        name: q
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: page指定時
+          schema:
+            $ref: '#/definitions/handler.PaginatedResponse-model_User'
+      security:
+      - BearerAuth: []
+      summary: ユーザー一覧取得
+      tags:
+      - Users
+    post:
+      consumes:
+      - application/json
+      description: 新しいユーザーアカウントを作成します。
+      parameters:
+      - description: ユーザー登録情報
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/admin.UserSaveRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.User'
+        "400":
+          description: バリデーション・重複エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: ユーザー新規登録
+      tags:
+      - Users
+  /admin/users/{id}:
+    delete:
+      description: 指定されたIDのユーザー情報を削除します。
+      parameters:
+      - description: AdminユーザーID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: ユーザー削除
+      tags:
+      - Users
+    get:
+      description: 指定されたIDのユーザー情報を取得します。
+      parameters:
+      - description: ユーザーID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.User'
+        "404":
+          description: 未検出エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: ユーザー詳細取得
+      tags:
+      - Users
+    put:
+      consumes:
+      - application/json
+      description: 指定されたIDのAdminユーザーの名前、メール、パスワードを更新します。
+      parameters:
+      - description: ユーザーID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ユーザー更新情報
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/admin.UserSaveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.User'
+        "400":
+          description: エラー
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: ユーザー情報更新
+      tags:
+      - Users
+securityDefinitions:
+  BearerAuth:
+    description: '"Bearer {token}" の形式でJWTトークンを入力してください。'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
