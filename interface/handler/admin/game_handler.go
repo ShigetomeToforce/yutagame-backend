@@ -212,12 +212,27 @@ func (h *GameHandler) GetAll(c echo.Context) error {
 				MachineIDs:      handler.ParseInt64Array(c, "machineIDs"),
 				GenreIDs:        handler.ParseInt64Array(c, "genreIDs"),
 				KeywordIDs:      handler.ParseInt64Array(c, "keywordIDs"),
+				ReleaseYear:     parseOptionalInt(c.QueryParam("releaseYear"), 1, 9999),
+				ReleaseMonth:    parseOptionalInt(c.QueryParam("releaseMonth"), 1, 12),
+				ReleaseDay:      parseOptionalInt(c.QueryParam("releaseDay"), 1, 31),
 				IsPlay:          handler.ParseOptionalBool(c, "isPlay"),
 				IsClear:         handler.ParseOptionalBool(c, "isClear"),
 				IsFavourite:     handler.ParseOptionalBool(c, "isFavourite"),
 			}
 		},
 	)
+}
+
+func parseOptionalInt(value string, min, max int) *int {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return nil
+	}
+	parsed, err := strconv.Atoi(trimmed)
+	if err != nil || parsed < min || parsed > max {
+		return nil
+	}
+	return &parsed
 }
 
 // -------------------------------------------------------------------------

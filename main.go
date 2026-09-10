@@ -10,6 +10,7 @@ import (
 	"yutagame-backend/domain/model"
 	"yutagame-backend/infrastructure/database"
 	"yutagame-backend/infrastructure/filelog"
+	"yutagame-backend/infrastructure/mail"
 	handlerAdmin "yutagame-backend/interface/handler/admin" // 💡 エイリアスを付けてインポート
 	handlerApp "yutagame-backend/interface/handler/app"
 	customMiddleware "yutagame-backend/interface/middleware" // 💡 追加
@@ -62,13 +63,24 @@ func main() {
 
 	if err := db.AutoMigrate(
 		&model.Announcement{},
+		&model.Feature{},
+		&model.FeatureGame{},
 		&model.ContactInquiry{},
+		&model.GameRecommendation{},
 		&model.GameFavorite{},
 		&model.SearchLog{},
 		&model.GameViewLog{},
+		&model.ContentAccessLog{},
 		&model.Banner{},
 	); err != nil {
 		log.Fatalf("failed to auto migrate: %v", err)
+	}
+
+	if err := db.Exec("ALTER TABLE features CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci").Error; err != nil {
+		log.Fatalf("failed to convert features charset: %v", err)
+	}
+	if err := db.Exec("ALTER TABLE feature_games CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci").Error; err != nil {
+		log.Fatalf("failed to convert feature_games charset: %v", err)
 	}
 
 	if err := db.Exec(`
@@ -127,9 +139,12 @@ func main() {
 	adminRepo := database.NewAdminRepository(db)
 	userRepo := database.NewUserRepository(db)
 	announcementRepo := database.NewAnnouncementRepository(db)
+	featureRepo := database.NewFeatureRepository(db)
 	contactRepo := database.NewContactInquiryRepository(db)
+	recommendationRepo := database.NewGameRecommendationRepository(db)
 	searchLogRepo := database.NewSearchLogRepository(db)
 	gameViewLogRepo := database.NewGameViewLogRepository(db)
+	contentAccessLogRepo := database.NewContentAccessLogRepository(db)
 	favoriteRepo := database.NewGameFavoriteRepository(db)
 	rankingRepo := database.NewGameRankingRepository(db)
 	bannerRepo := database.NewBannerRepository(db)
@@ -142,8 +157,10 @@ func main() {
 	manufacturerUseCase := usecaseAdmin.NewManufacturerUseCase(manufacturerRepo)
 	adminUseCase := usecaseAdmin.NewAdminUseCase(adminRepo)
 	userUseCase := usecaseAdmin.NewUserUseCase(userRepo)
-	announcementUseCase := usecaseAdmin.NewAnnouncementUseCase(announcementRepo)
+	announcementUseCase := usecaseAdmin.NewAnnouncementUseCase(announcementRepo, contentAccessLogRepo)
+	featureUseCase := usecaseAdmin.NewFeatureUseCase(featureRepo, contentAccessLogRepo)
 	contactUseCase := usecaseAdmin.NewContactInquiryUseCase(contactRepo)
+	recommendationUseCase := usecaseAdmin.NewGameRecommendationUseCase(recommendationRepo)
 	accessLogUseCase := usecaseAdmin.NewAccessLogUseCase(
 		searchLogRepo,
 		gameViewLogRepo,
@@ -153,10 +170,12 @@ func main() {
 		genreRepo,
 		keywordRepo,
 		gameRepo,
+		contentAccessLogRepo,
 	)
 	rankingUseCase := usecaseAdmin.NewGameRankingUseCase(gameRepo, rankingRepo)
-	bannerUseCase := usecaseAdmin.NewBannerUseCase(bannerRepo)
-	analyticsLogUseCase := usecaseApp.NewAnalyticsLogUseCase(searchLogRepo, gameViewLogRepo)
+	bannerUseCase := usecaseAdmin.NewBannerUseCase(bannerRepo, contentAccessLogRepo)
+	analyticsLogUseCase := usecaseApp.NewAnalyticsLogUseCase(searchLogRepo, gameViewLogRepo, contentAccessLogRepo)
+	contactNotifier := mail.NewSMTPContactNotifierFromEnv()
 	favoriteUseCase := usecaseApp.NewGameFavoriteUseCase(gameRepo, favoriteRepo)
 	publicGameUseCase := usecaseApp.NewGamePublicUseCase(
 		gameRepo,
@@ -169,8 +188,9 @@ func main() {
 		gameViewLogRepo,
 	)
 	publicAnnouncementUseCase := usecaseApp.NewAnnouncementPublicUseCase(announcementRepo)
-	publicContactUseCase := usecaseApp.NewContactPublicUseCase(contactRepo)
-	siteUseCase := usecaseApp.NewSiteUseCase(gameRepo, announcementRepo)
+	publicFeatureUseCase := usecaseApp.NewFeaturePublicUseCase(featureRepo)
+	publicContactUseCase := usecaseApp.NewContactPublicUseCase(contactRepo, contactNotifier)
+	siteUseCase := usecaseApp.NewSiteUseCase(gameRepo, announcementRepo, featureRepo)
 
 	// --- Handler 層 ---
 	machineHandler := handlerAdmin.NewMachineHandler(machineUseCase)
@@ -181,17 +201,21 @@ func main() {
 	adminHandler := handlerAdmin.NewAdminHandler(adminUseCase)
 	userHandler := handlerAdmin.NewUserHandler(userUseCase)
 	announcementHandler := handlerAdmin.NewAnnouncementHandler(announcementUseCase)
+	featureHandler := handlerAdmin.NewFeatureHandler(featureUseCase)
 	contactInquiryHandler := handlerAdmin.NewContactInquiryHandler(contactUseCase)
+	recommendationHandler := handlerAdmin.NewGameRecommendationHandler(recommendationUseCase)
 	accessLogHandler := handlerAdmin.NewAccessLogHandler(accessLogUseCase)
 	gameRankingHandler := handlerAdmin.NewGameRankingHandler(rankingUseCase)
 	bannerHandler := handlerAdmin.NewBannerHandler(bannerUseCase)
 	logFileHandler := handlerAdmin.NewLogFileHandler(backendFileLogger)
 	publicGameHandler := handlerApp.NewGameHandler(publicGameUseCase, analyticsLogUseCase)
 	publicGameFavoriteHandler := handlerApp.NewGameFavoriteHandler(favoriteUseCase)
-	publicAnnouncementHandler := handlerApp.NewAnnouncementHandler(publicAnnouncementUseCase)
+	publicAnnouncementHandler := handlerApp.NewAnnouncementHandler(publicAnnouncementUseCase, analyticsLogUseCase)
+	publicFeatureHandler := handlerApp.NewFeatureHandler(publicFeatureUseCase, analyticsLogUseCase)
 	publicContactHandler := handlerApp.NewContactHandler(publicContactUseCase)
+	publicRecommendationHandler := handlerApp.NewGameRecommendationHandler(recommendationUseCase, contactNotifier)
 	siteHandler := handlerApp.NewSiteHandler(siteUseCase)
-	publicBannerHandler := handlerApp.NewBannerHandler(bannerRepo)
+	publicBannerHandler := handlerApp.NewBannerHandler(bannerRepo, analyticsLogUseCase)
 
 	// 4. Echo インスタンスの生成と共通設定
 	e := echo.New()
@@ -216,10 +240,14 @@ func main() {
 		// 🌐 【公開エリア】一般公開向けの参照系API
 		public := api.Group("/app")
 		{
+			public.GET("/site-stats", publicGameHandler.GetSiteStats)
 			public.GET("/top", publicGameHandler.GetTop)
 			public.GET("/announcements", publicAnnouncementHandler.GetAll)
 			public.GET("/announcements/:id", publicAnnouncementHandler.GetByID)
+			public.GET("/features", publicFeatureHandler.GetAll)
+			public.GET("/features/:code", publicFeatureHandler.GetByCode)
 			public.POST("/contacts", publicContactHandler.Create)
+			public.POST("/game-recommendations", publicRecommendationHandler.Create)
 			public.GET("/sitemap", siteHandler.GetSitemap)
 			public.GET("/catalog/machines", publicGameHandler.GetMachines)
 			public.GET("/catalog/genres", publicGameHandler.GetGenres)
@@ -301,15 +329,33 @@ func main() {
 			adminProtected.POST("/keywords/import/apply", keywordHandler.ApplyImportCSV)
 
 			adminProtected.GET("/announcements", announcementHandler.GetAll)
+			adminProtected.GET("/announcements/published-order", announcementHandler.GetPublishedForOrdering)
+			adminProtected.POST("/announcements/order", announcementHandler.UpdateOrder)
 			adminProtected.GET("/announcements/:id", announcementHandler.GetByID)
 			adminProtected.POST("/announcements", announcementHandler.Create)
 			adminProtected.PUT("/announcements/:id", announcementHandler.Update)
 			adminProtected.DELETE("/announcements/:id", announcementHandler.Delete)
+			adminProtected.POST("/announcements/upload-image", announcementHandler.UploadContentImage)
+
+			adminProtected.GET("/features", featureHandler.GetAll)
+			adminProtected.GET("/features/published-order", featureHandler.GetPublishedForOrdering)
+			adminProtected.POST("/features/order", featureHandler.UpdateOrder)
+			adminProtected.GET("/features/:id", featureHandler.GetByID)
+			adminProtected.POST("/features", featureHandler.Create)
+			adminProtected.PUT("/features/:id", featureHandler.Update)
+			adminProtected.DELETE("/features/:id", featureHandler.Delete)
+			adminProtected.POST("/features/:id/thumbnail-image", featureHandler.UploadThumbnailImage)
+			adminProtected.POST("/features/upload-image", featureHandler.UploadContentImage)
 
 			adminProtected.GET("/contacts", contactInquiryHandler.GetAll)
 			adminProtected.GET("/contacts/:id", contactInquiryHandler.GetByID)
 			adminProtected.PUT("/contacts/:id", contactInquiryHandler.Update)
 			adminProtected.DELETE("/contacts/:id", contactInquiryHandler.Delete)
+
+			adminProtected.GET("/game-recommendations", recommendationHandler.GetAll)
+			adminProtected.GET("/game-recommendations/:id", recommendationHandler.GetByID)
+			adminProtected.PUT("/game-recommendations/:id", recommendationHandler.Update)
+			adminProtected.DELETE("/game-recommendations/:id", recommendationHandler.Delete)
 
 			adminProtected.GET("/access-logs/dashboard", accessLogHandler.GetDashboard)
 			adminProtected.GET("/access-logs/monthly-table", accessLogHandler.GetMonthlyTable)

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -153,6 +154,44 @@ func containsQuery(e Entry, query string) bool {
 func (l *DailyLogger) buildFilePath(scope, kind, date string) string {
 	fileName := fmt.Sprintf("%s_log_%s.log", kind, date)
 	return filepath.Join(l.baseDir, scope, fileName)
+}
+
+func parseLogDateFromFileName(name string) (time.Time, bool) {
+	parts := strings.Split(strings.TrimSpace(name), "_")
+	if len(parts) != 3 || !strings.HasSuffix(parts[2], ".log") {
+		return time.Time{}, false
+	}
+	datePart := strings.TrimSuffix(parts[2], ".log")
+	parsed, err := time.ParseInLocation("20060102", datePart, time.Local)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return parsed, true
+}
+
+func (l *DailyLogger) CleanupOldFiles(retentionDays int) error {
+	if retentionDays <= 0 {
+		return nil
+	}
+	cutoff := time.Now().AddDate(0, 0, -retentionDays)
+	cutoffDate := time.Date(cutoff.Year(), cutoff.Month(), cutoff.Day(), 0, 0, 0, 0, time.Local)
+
+	return filepath.WalkDir(l.baseDir, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				return nil
+			}
+			return err
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		logDate, ok := parseLogDateFromFileName(entry.Name())
+		if !ok || !logDate.Before(cutoffDate) {
+			return nil
+		}
+		return os.Remove(path)
+	})
 }
 
 func (l *DailyLogger) Log(

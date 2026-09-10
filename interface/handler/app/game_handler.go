@@ -88,6 +88,14 @@ func (h *GameHandler) GetKeywords(c echo.Context) error {
 	return c.JSON(http.StatusOK, items)
 }
 
+func (h *GameHandler) GetSiteStats(c echo.Context) error {
+	stats, err := h.gameUseCase.GetSiteStats(c.Request().Context())
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+	}
+	return c.JSON(http.StatusOK, stats)
+}
+
 func (h *GameHandler) GetTop(c echo.Context) error {
 	releaseLimit := parseLimit(c.QueryParam("releaseLimit"), 5)
 	recentLimit := parseLimit(c.QueryParam("recentLimit"), 8)

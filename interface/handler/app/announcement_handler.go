@@ -11,10 +11,11 @@ import (
 
 type AnnouncementHandler struct {
 	announcementUseCase *usecaseApp.AnnouncementPublicUseCase
+	analyticsLogUseCase *usecaseApp.AnalyticsLogUseCase
 }
 
-func NewAnnouncementHandler(announcementUseCase *usecaseApp.AnnouncementPublicUseCase) *AnnouncementHandler {
-	return &AnnouncementHandler{announcementUseCase: announcementUseCase}
+func NewAnnouncementHandler(announcementUseCase *usecaseApp.AnnouncementPublicUseCase, analyticsLogUseCase *usecaseApp.AnalyticsLogUseCase) *AnnouncementHandler {
+	return &AnnouncementHandler{announcementUseCase: announcementUseCase, analyticsLogUseCase: analyticsLogUseCase}
 }
 
 func (h *AnnouncementHandler) GetAll(c echo.Context) error {
@@ -35,6 +36,16 @@ func (h *AnnouncementHandler) GetByID(c echo.Context) error {
 	}
 	if item == nil {
 		return c.JSON(http.StatusNotFound, handler.ErrorResponse{Message: "指定されたお知らせが見つかりませんでした。"})
+	}
+	if h.analyticsLogUseCase != nil {
+		if logErr := h.analyticsLogUseCase.RecordContentAccess(c.Request().Context(), usecaseApp.ContentAccessLogInput{
+			VisitorID:   resolveVisitorID(c),
+			IP:          c.RealIP(),
+			ContentType: "announcement",
+			ContentKey:  strconv.FormatInt(item.ID, 10),
+		}); logErr != nil {
+			c.Logger().Warnf("announcement access log write failed: %v", logErr)
+		}
 	}
 	return c.JSON(http.StatusOK, item)
 }

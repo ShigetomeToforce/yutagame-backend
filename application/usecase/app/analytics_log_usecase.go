@@ -26,18 +26,28 @@ type GameViewLogInput struct {
 	GameCode  string
 }
 
+type ContentAccessLogInput struct {
+	VisitorID   string
+	IP          string
+	ContentType string
+	ContentKey  string
+}
+
 type AnalyticsLogUseCase struct {
-	searchLogRepo   *database.SearchLogRepository
-	gameViewLogRepo *database.GameViewLogRepository
+	searchLogRepo        *database.SearchLogRepository
+	gameViewLogRepo      *database.GameViewLogRepository
+	contentAccessLogRepo *database.ContentAccessLogRepository
 }
 
 func NewAnalyticsLogUseCase(
 	searchLogRepo *database.SearchLogRepository,
 	gameViewLogRepo *database.GameViewLogRepository,
+	contentAccessLogRepo *database.ContentAccessLogRepository,
 ) *AnalyticsLogUseCase {
 	return &AnalyticsLogUseCase{
-		searchLogRepo:   searchLogRepo,
-		gameViewLogRepo: gameViewLogRepo,
+		searchLogRepo:        searchLogRepo,
+		gameViewLogRepo:      gameViewLogRepo,
+		contentAccessLogRepo: contentAccessLogRepo,
 	}
 }
 
@@ -90,4 +100,27 @@ func (u *AnalyticsLogUseCase) RecordGameView(ctx context.Context, input GameView
 	}
 
 	return u.gameViewLogRepo.Create(ctx, item)
+}
+
+func (u *AnalyticsLogUseCase) RecordContentAccess(ctx context.Context, input ContentAccessLogInput) error {
+	if u.contentAccessLogRepo == nil {
+		return nil
+	}
+	item := &model.ContentAccessLog{
+		VisitorID:   strings.TrimSpace(input.VisitorID),
+		IPHash:      hashIP(input.IP),
+		ContentType: strings.TrimSpace(input.ContentType),
+		ContentKey:  strings.TrimSpace(input.ContentKey),
+	}
+	if item.ContentType == "" || item.ContentKey == "" {
+		return nil
+	}
+	exists, err := u.contentAccessLogRepo.ExistsDailyAccess(ctx, item.ContentType, item.ContentKey, item.VisitorID, item.IPHash, time.Now())
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
+	return u.contentAccessLogRepo.Create(ctx, item)
 }

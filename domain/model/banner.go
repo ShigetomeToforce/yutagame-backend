@@ -13,6 +13,7 @@ type Banner struct {
 	EndsAt       *time.Time `gorm:"column:ends_at" json:"endsAt,omitempty"`
 	DisplayOrder int        `gorm:"column:display_order;not null;index" json:"displayOrder"`
 	ClickCount   int64      `gorm:"column:click_count;not null" json:"clickCount"`
+	AccessCount  int64      `gorm:"-" json:"accessCount"`
 	CreatedAt    time.Time  `gorm:"column:created_at;not null;<-:create" json:"createdAt"`
 	UpdatedAt    time.Time  `gorm:"column:updated_at;not null" json:"updatedAt"`
 }

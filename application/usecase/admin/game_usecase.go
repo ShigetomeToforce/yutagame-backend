@@ -25,6 +25,9 @@ type GameListFilter struct {
 	MachineIDs      []int64
 	GenreIDs        []int64
 	KeywordIDs      []int64
+	ReleaseYear     *int
+	ReleaseMonth    *int
+	ReleaseDay      *int
 	IsPlay          *bool
 	IsClear         *bool
 	IsFavourite     *bool
@@ -108,7 +111,8 @@ func (u *GameUseCase) GetGamesWithPagination(
 
 	if filter.SearchWord != "" || len(filter.ManufacturerIDs) > 0 ||
 		len(filter.MachineIDs) > 0 || len(filter.GenreIDs) > 0 ||
-		len(filter.KeywordIDs) > 0 || filter.IsPlay != nil ||
+		len(filter.KeywordIDs) > 0 || filter.ReleaseYear != nil ||
+		filter.ReleaseMonth != nil || filter.ReleaseDay != nil || filter.IsPlay != nil ||
 		filter.IsClear != nil || filter.IsFavourite != nil {
 
 		whereQuery = func(db *gorm.DB) *gorm.DB {
@@ -138,6 +142,18 @@ func (u *GameUseCase) GetGamesWithPagination(
                         AND gk.keyword_id IN ?
                     )
                 `, filter.KeywordIDs)
+			}
+
+			if filter.ReleaseYear != nil {
+				db = db.Where("YEAR(release_date) = ?", *filter.ReleaseYear)
+			}
+
+			if filter.ReleaseMonth != nil {
+				db = db.Where("MONTH(release_date) = ?", *filter.ReleaseMonth)
+			}
+
+			if filter.ReleaseDay != nil {
+				db = db.Where("DAYOFMONTH(release_date) = ?", *filter.ReleaseDay)
 			}
 
 			if filter.IsPlay != nil {

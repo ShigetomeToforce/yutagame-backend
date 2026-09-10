@@ -21,6 +21,11 @@ type GameRepository struct {
 	db *gorm.DB
 }
 
+type GameStats struct {
+	GameCount      int64 `json:"gameCount"`
+	TotalListPrice int64 `json:"totalListPrice"`
+}
+
 // NewGameRepository GameRepositoryの新しいインスタンスを生成するコンストラクタ
 func NewGameRepository(db *gorm.DB) *GameRepository {
 	return &GameRepository{db: db}
@@ -177,6 +182,15 @@ func (r *GameRepository) FindAllWithPaginationByOrder(
 // CountAll ページングの総ページ数計算のため、条件に合致する機種情報の総件数を取得する
 func (r *GameRepository) CountAll(ctx context.Context, whereQueries ...func(*gorm.DB) *gorm.DB) (int64, error) {
 	return ExecuteCount[model.Game](ctx, r.db, whereQueries...)
+}
+
+func (r *GameRepository) GetStats(ctx context.Context) (GameStats, error) {
+	var stats GameStats
+	err := r.db.WithContext(ctx).
+		Model(&model.Game{}).
+		Select("COUNT(*) AS game_count, COALESCE(SUM(list_price), 0) AS total_list_price").
+		Scan(&stats).Error
+	return stats, err
 }
 
 // FindReleasedOnMonthDay 指定日を起点に、同月日のゲームを優先しつつ、

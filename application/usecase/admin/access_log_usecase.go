@@ -8,24 +8,27 @@ import (
 )
 
 type AccessLogKPIBucket struct {
-	From            string                      `json:"from"`
-	To              string                      `json:"to"`
-	PageViews       int64                       `json:"pageViews"`
-	UniqueVisitors  int64                       `json:"uniqueVisitors"`
-	APICalls        int64                       `json:"apiCalls"`
-	SearchCount     int64                       `json:"searchCount"`
-	ContactCount    int64                       `json:"contactCount"`
-	GenreSearches   int64                       `json:"genreSearches"`
-	MachineSearches int64                       `json:"machineSearches"`
-	MakerSearches   int64                       `json:"makerSearches"`
-	KeywordSearches int64                       `json:"keywordSearches"`
-	AffiliateClicks int64                       `json:"affiliateClicks"`
-	ErrorCount      int64                       `json:"errorCount"`
-	TopMachines     []database.AccessLogTopItem `json:"topMachines"`
-	TopManufactures []database.AccessLogTopItem `json:"topManufacturers"`
-	TopGenres       []database.AccessLogTopItem `json:"topGenres"`
-	TopKeywords     []database.AccessLogTopItem `json:"topKeywords"`
-	TopSearchWords  []database.AccessLogTopItem `json:"topSearchWords"`
+	From              string                      `json:"from"`
+	To                string                      `json:"to"`
+	PageViews         int64                       `json:"pageViews"`
+	UniqueVisitors    int64                       `json:"uniqueVisitors"`
+	APICalls          int64                       `json:"apiCalls"`
+	SearchCount       int64                       `json:"searchCount"`
+	ContactCount      int64                       `json:"contactCount"`
+	GenreSearches     int64                       `json:"genreSearches"`
+	MachineSearches   int64                       `json:"machineSearches"`
+	MakerSearches     int64                       `json:"makerSearches"`
+	KeywordSearches   int64                       `json:"keywordSearches"`
+	AffiliateClicks   int64                       `json:"affiliateClicks"`
+	AnnouncementViews int64                       `json:"announcementViews"`
+	FeatureViews      int64                       `json:"featureViews"`
+	BannerViews       int64                       `json:"bannerViews"`
+	ErrorCount        int64                       `json:"errorCount"`
+	TopMachines       []database.AccessLogTopItem `json:"topMachines"`
+	TopManufactures   []database.AccessLogTopItem `json:"topManufacturers"`
+	TopGenres         []database.AccessLogTopItem `json:"topGenres"`
+	TopKeywords       []database.AccessLogTopItem `json:"topKeywords"`
+	TopSearchWords    []database.AccessLogTopItem `json:"topSearchWords"`
 }
 
 type AccessLogSearchBreakdown struct {
@@ -47,15 +50,18 @@ type AccessLogDashboard struct {
 }
 
 type AccessLogMonthlyRow struct {
-	Date            string `json:"date"`
-	PageViews       int64  `json:"pageViews"`
-	UniqueVisitors  int64  `json:"uniqueVisitors"`
-	SearchCount     int64  `json:"searchCount"`
-	MachineSearches int64  `json:"machineSearches"`
-	MakerSearches   int64  `json:"makerSearches"`
-	GenreSearches   int64  `json:"genreSearches"`
-	KeywordSearches int64  `json:"keywordSearches"`
-	ContactCount    int64  `json:"contactCount"`
+	Date              string `json:"date"`
+	PageViews         int64  `json:"pageViews"`
+	UniqueVisitors    int64  `json:"uniqueVisitors"`
+	SearchCount       int64  `json:"searchCount"`
+	MachineSearches   int64  `json:"machineSearches"`
+	MakerSearches     int64  `json:"makerSearches"`
+	GenreSearches     int64  `json:"genreSearches"`
+	KeywordSearches   int64  `json:"keywordSearches"`
+	ContactCount      int64  `json:"contactCount"`
+	AnnouncementViews int64  `json:"announcementViews"`
+	FeatureViews      int64  `json:"featureViews"`
+	BannerViews       int64  `json:"bannerViews"`
 }
 
 type AccessLogMonthlyTable struct {
@@ -67,14 +73,15 @@ type AccessLogMonthlyTable struct {
 }
 
 type AccessLogUseCase struct {
-	searchLogRepo    *database.SearchLogRepository
-	gameViewLogRepo  *database.GameViewLogRepository
-	contactRepo      *database.ContactInquiryRepository
-	machineRepo      *database.MachineRepository
-	manufacturerRepo *database.ManufacturerRepository
-	genreRepo        *database.GenreRepository
-	keywordRepo      *database.KeywordRepository
-	gameRepo         *database.GameRepository
+	searchLogRepo        *database.SearchLogRepository
+	gameViewLogRepo      *database.GameViewLogRepository
+	contactRepo          *database.ContactInquiryRepository
+	machineRepo          *database.MachineRepository
+	manufacturerRepo     *database.ManufacturerRepository
+	genreRepo            *database.GenreRepository
+	keywordRepo          *database.KeywordRepository
+	gameRepo             *database.GameRepository
+	contentAccessLogRepo *database.ContentAccessLogRepository
 }
 
 func NewAccessLogUseCase(
@@ -86,16 +93,18 @@ func NewAccessLogUseCase(
 	genreRepo *database.GenreRepository,
 	keywordRepo *database.KeywordRepository,
 	gameRepo *database.GameRepository,
+	contentAccessLogRepo *database.ContentAccessLogRepository,
 ) *AccessLogUseCase {
 	return &AccessLogUseCase{
-		searchLogRepo:    searchLogRepo,
-		gameViewLogRepo:  gameViewLogRepo,
-		contactRepo:      contactRepo,
-		machineRepo:      machineRepo,
-		manufacturerRepo: manufacturerRepo,
-		genreRepo:        genreRepo,
-		keywordRepo:      keywordRepo,
-		gameRepo:         gameRepo,
+		searchLogRepo:        searchLogRepo,
+		gameViewLogRepo:      gameViewLogRepo,
+		contactRepo:          contactRepo,
+		machineRepo:          machineRepo,
+		manufacturerRepo:     manufacturerRepo,
+		genreRepo:            genreRepo,
+		keywordRepo:          keywordRepo,
+		gameRepo:             gameRepo,
+		contentAccessLogRepo: contentAccessLogRepo,
 	}
 }
 
@@ -136,6 +145,10 @@ func (u *AccessLogUseCase) buildBucket(ctx context.Context, from, to time.Time) 
 	if err != nil {
 		return AccessLogKPIBucket{}, err
 	}
+	contentCounts, err := u.contentAccessLogRepo.AggregateRange(ctx, from, to)
+	if err != nil {
+		return AccessLogKPIBucket{}, err
+	}
 
 	topMachines, err := u.searchLogRepo.TopByField(ctx, from, to, "machineCode", 5)
 	if err != nil {
@@ -159,24 +172,27 @@ func (u *AccessLogUseCase) buildBucket(ctx context.Context, from, to time.Time) 
 	}
 
 	return AccessLogKPIBucket{
-		From:            from.Format("2006-01-02"),
-		To:              to.Add(-time.Nanosecond).Format("2006-01-02"),
-		PageViews:       viewAgg.PageViews,
-		UniqueVisitors:  viewAgg.UniqueVisitors,
-		APICalls:        0,
-		SearchCount:     searchAgg.SearchCount,
-		ContactCount:    contactCount,
-		GenreSearches:   searchAgg.GenreSearches,
-		MachineSearches: searchAgg.MachineSearches,
-		MakerSearches:   searchAgg.MakerSearches,
-		KeywordSearches: searchAgg.KeywordSearches,
-		AffiliateClicks: 0,
-		ErrorCount:      0,
-		TopMachines:     topMachines,
-		TopManufactures: topManufacturers,
-		TopGenres:       topGenres,
-		TopKeywords:     topKeywords,
-		TopSearchWords:  topSearchWords,
+		From:              from.Format("2006-01-02"),
+		To:                to.Add(-time.Nanosecond).Format("2006-01-02"),
+		PageViews:         viewAgg.PageViews,
+		UniqueVisitors:    viewAgg.UniqueVisitors,
+		APICalls:          0,
+		SearchCount:       searchAgg.SearchCount,
+		ContactCount:      contactCount,
+		GenreSearches:     searchAgg.GenreSearches,
+		MachineSearches:   searchAgg.MachineSearches,
+		MakerSearches:     searchAgg.MakerSearches,
+		KeywordSearches:   searchAgg.KeywordSearches,
+		AffiliateClicks:   0,
+		AnnouncementViews: contentCounts.AnnouncementViews,
+		FeatureViews:      contentCounts.FeatureViews,
+		BannerViews:       contentCounts.BannerViews,
+		ErrorCount:        0,
+		TopMachines:       topMachines,
+		TopManufactures:   topManufacturers,
+		TopGenres:         topGenres,
+		TopKeywords:       topKeywords,
+		TopSearchWords:    topSearchWords,
 	}, nil
 }
 
@@ -480,17 +496,24 @@ func (u *AccessLogUseCase) GetMonthlyTable(
 		if err != nil {
 			return nil, err
 		}
+		contentCounts, err := u.contentAccessLogRepo.AggregateRange(ctx, day, dayEnd)
+		if err != nil {
+			return nil, err
+		}
 
 		rows = append(rows, AccessLogMonthlyRow{
-			Date:            day.Format("2006-01-02"),
-			PageViews:       viewAgg.PageViews,
-			UniqueVisitors:  viewAgg.UniqueVisitors,
-			SearchCount:     searchAgg.SearchCount,
-			MachineSearches: searchAgg.MachineSearches,
-			MakerSearches:   searchAgg.MakerSearches,
-			GenreSearches:   searchAgg.GenreSearches,
-			KeywordSearches: searchAgg.KeywordSearches,
-			ContactCount:    contactCount,
+			Date:              day.Format("2006-01-02"),
+			PageViews:         viewAgg.PageViews,
+			UniqueVisitors:    viewAgg.UniqueVisitors,
+			SearchCount:       searchAgg.SearchCount,
+			MachineSearches:   searchAgg.MachineSearches,
+			MakerSearches:     searchAgg.MakerSearches,
+			GenreSearches:     searchAgg.GenreSearches,
+			KeywordSearches:   searchAgg.KeywordSearches,
+			ContactCount:      contactCount,
+			AnnouncementViews: contentCounts.AnnouncementViews,
+			FeatureViews:      contentCounts.FeatureViews,
+			BannerViews:       contentCounts.BannerViews,
 		})
 	}
 
@@ -506,17 +529,24 @@ func (u *AccessLogUseCase) GetMonthlyTable(
 	if err != nil {
 		return nil, err
 	}
+	totalContentCounts, err := u.contentAccessLogRepo.AggregateRange(ctx, monthStart, monthEnd)
+	if err != nil {
+		return nil, err
+	}
 
 	monthlySum := AccessLogMonthlyRow{
-		Date:            "合計",
-		PageViews:       totalViewAgg.PageViews,
-		UniqueVisitors:  totalViewAgg.UniqueVisitors,
-		SearchCount:     totalSearchAgg.SearchCount,
-		MachineSearches: totalSearchAgg.MachineSearches,
-		MakerSearches:   totalSearchAgg.MakerSearches,
-		GenreSearches:   totalSearchAgg.GenreSearches,
-		KeywordSearches: totalSearchAgg.KeywordSearches,
-		ContactCount:    totalContactCount,
+		Date:              "合計",
+		PageViews:         totalViewAgg.PageViews,
+		UniqueVisitors:    totalViewAgg.UniqueVisitors,
+		SearchCount:       totalSearchAgg.SearchCount,
+		MachineSearches:   totalSearchAgg.MachineSearches,
+		MakerSearches:     totalSearchAgg.MakerSearches,
+		GenreSearches:     totalSearchAgg.GenreSearches,
+		KeywordSearches:   totalSearchAgg.KeywordSearches,
+		ContactCount:      totalContactCount,
+		AnnouncementViews: totalContentCounts.AnnouncementViews,
+		FeatureViews:      totalContentCounts.FeatureViews,
+		BannerViews:       totalContentCounts.BannerViews,
 	}
 
 	return &AccessLogMonthlyTable{

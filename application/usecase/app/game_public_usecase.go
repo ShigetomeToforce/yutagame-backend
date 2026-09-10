@@ -56,6 +56,11 @@ type PublicRankingResponse struct {
 	Limit      int          `json:"limit"`
 }
 
+type SiteStats struct {
+	GameCount      int64 `json:"gameCount"`
+	TotalListPrice int64 `json:"totalListPrice"`
+}
+
 func (u *GamePublicUseCase) applyActiveRanks(ctx context.Context, games []model.Game) error {
 	if u.rankingRepo == nil || len(games) == 0 {
 		return nil
@@ -171,6 +176,14 @@ func (u *GamePublicUseCase) GetKeywords(ctx context.Context) ([]KeywordItem, err
 		})
 	}
 	return result, nil
+}
+
+func (u *GamePublicUseCase) GetSiteStats(ctx context.Context) (SiteStats, error) {
+	stats, err := u.gameRepo.GetStats(ctx)
+	if err != nil {
+		return SiteStats{}, err
+	}
+	return SiteStats{GameCount: stats.GameCount, TotalListPrice: stats.TotalListPrice}, nil
 }
 
 func (u *GamePublicUseCase) SearchGames(

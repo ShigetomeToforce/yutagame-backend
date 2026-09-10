@@ -29,8 +29,8 @@ func (u *ContactInquiryUseCase) CreateContactInquiry(ctx context.Context, name, 
 	email = strings.TrimSpace(email)
 	subject = strings.TrimSpace(subject)
 	message = strings.TrimSpace(message)
-	if name == "" || email == "" || subject == "" || message == "" {
-		return nil, errors.New("all fields are required")
+	if subject == "" || message == "" {
+		return nil, errors.New("subject and message are required")
 	}
 	inquiry := &model.ContactInquiry{
 		Name:      name,

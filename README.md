@@ -32,3 +32,19 @@ docker compose logs -f
 # コンテナの停止
 docker compose down
 ```
+
+## 📧 ローカルメール確認
+
+お問い合わせ通知メールとおすすめゲーム投稿通知メールはSMTPで送信します。Docker環境ではMailpitを同時に起動し、外部に送信せずローカルで確認できます。
+
+```bash
+docker compose up -d --build
+```
+
+- SMTP: `mailpit:1025`
+- 確認画面: `http://localhost:8025`
+- 通知先: `CONTACT_NOTIFY_TO`
+
+本番環境では `SMTP_HOST` / `SMTP_PORT` / `SMTP_USERNAME` / `SMTP_PASSWORD` /
+`SMTP_FROM` / `CONTACT_NOTIFY_TO` / `ADMIN_SITE_URL`
+を環境変数で設定してください。

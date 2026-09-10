@@ -10,6 +10,8 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+const logRetentionDays = 30
+
 type LogFileHandler struct {
 	logger *filelog.DailyLogger
 }
@@ -19,6 +21,10 @@ func NewLogFileHandler(logger *filelog.DailyLogger) *LogFileHandler {
 }
 
 func (h *LogFileHandler) GetAll(c echo.Context) error {
+	if err := h.logger.CleanupOldFiles(logRetentionDays); err != nil {
+		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+	}
+
 	page := 1
 	if raw := strings.TrimSpace(c.QueryParam("page")); raw != "" {
 		if n, err := strconv.Atoi(raw); err == nil && n > 0 {

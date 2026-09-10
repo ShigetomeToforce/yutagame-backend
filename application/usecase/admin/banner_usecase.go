@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 	"time"
 	"yutagame-backend/domain/model"
@@ -16,11 +17,30 @@ var bannerPlacements = map[string]bool{
 }
 
 type BannerUseCase struct {
-	bannerRepo *database.BannerRepository
+	bannerRepo    *database.BannerRepository
+	accessLogRepo *database.ContentAccessLogRepository
 }
 
-func NewBannerUseCase(bannerRepo *database.BannerRepository) *BannerUseCase {
-	return &BannerUseCase{bannerRepo: bannerRepo}
+func NewBannerUseCase(bannerRepo *database.BannerRepository, accessLogRepo *database.ContentAccessLogRepository) *BannerUseCase {
+	return &BannerUseCase{bannerRepo: bannerRepo, accessLogRepo: accessLogRepo}
+}
+
+func (u *BannerUseCase) attachAccessCounts(ctx context.Context, items []model.Banner) []model.Banner {
+	if len(items) == 0 || u.accessLogRepo == nil {
+		return items
+	}
+	keys := make([]string, 0, len(items))
+	for _, item := range items {
+		keys = append(keys, strconv.FormatInt(item.ID, 10))
+	}
+	counts, err := u.accessLogRepo.CountByContentKeys(ctx, "banner", keys)
+	if err != nil {
+		return items
+	}
+	for i := range items {
+		items[i].AccessCount = counts[strconv.FormatInt(items[i].ID, 10)]
+	}
+	return items
 }
 
 func validateBanner(title, placement string, startsAt, endsAt *time.Time) error {
@@ -54,7 +74,8 @@ func (u *BannerUseCase) GetByID(ctx context.Context, id int64) (*model.Banner, e
 }
 
 func (u *BannerUseCase) GetAll(ctx context.Context) ([]model.Banner, error) {
-	return u.bannerRepo.FindAll(ctx)
+	items, err := u.bannerRepo.FindAll(ctx)
+	return u.attachAccessCounts(ctx, items), err
 }
 
 func (u *BannerUseCase) Update(ctx context.Context, id int64, update *model.Banner) (*model.Banner, error) {

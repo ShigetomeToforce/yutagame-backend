@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+	usecaseApp "yutagame-backend/application/usecase/app"
 	"yutagame-backend/domain/model"
 	"yutagame-backend/infrastructure/database"
 	"yutagame-backend/interface/handler"
@@ -12,11 +13,12 @@ import (
 )
 
 type BannerHandler struct {
-	bannerRepo *database.BannerRepository
+	bannerRepo          *database.BannerRepository
+	analyticsLogUseCase *usecaseApp.AnalyticsLogUseCase
 }
 
-func NewBannerHandler(bannerRepo *database.BannerRepository) *BannerHandler {
-	return &BannerHandler{bannerRepo: bannerRepo}
+func NewBannerHandler(bannerRepo *database.BannerRepository, analyticsLogUseCase *usecaseApp.AnalyticsLogUseCase) *BannerHandler {
+	return &BannerHandler{bannerRepo: bannerRepo, analyticsLogUseCase: analyticsLogUseCase}
 }
 
 func (h *BannerHandler) GetByPlacement(c echo.Context) error {
@@ -30,6 +32,18 @@ func (h *BannerHandler) GetByPlacement(c echo.Context) error {
 	}
 	if items == nil {
 		items = []model.Banner{}
+	}
+	if h.analyticsLogUseCase != nil {
+		for _, item := range items {
+			if logErr := h.analyticsLogUseCase.RecordContentAccess(c.Request().Context(), usecaseApp.ContentAccessLogInput{
+				VisitorID:   resolveVisitorID(c),
+				IP:          c.RealIP(),
+				ContentType: "banner",
+				ContentKey:  strconv.FormatInt(item.ID, 10),
+			}); logErr != nil {
+				c.Logger().Warnf("banner access log write failed: %v", logErr)
+			}
+		}
 	}
 	return c.JSON(http.StatusOK, items)
 }
