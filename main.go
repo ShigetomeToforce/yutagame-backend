@@ -66,6 +66,7 @@ func main() {
 		&model.GameFavorite{},
 		&model.SearchLog{},
 		&model.GameViewLog{},
+		&model.Banner{},
 	); err != nil {
 		log.Fatalf("failed to auto migrate: %v", err)
 	}
@@ -131,6 +132,7 @@ func main() {
 	gameViewLogRepo := database.NewGameViewLogRepository(db)
 	favoriteRepo := database.NewGameFavoriteRepository(db)
 	rankingRepo := database.NewGameRankingRepository(db)
+	bannerRepo := database.NewBannerRepository(db)
 
 	// --- UseCase 層 ---
 	machineUseCase := usecaseAdmin.NewMachineUseCase(machineRepo)
@@ -153,6 +155,7 @@ func main() {
 		gameRepo,
 	)
 	rankingUseCase := usecaseAdmin.NewGameRankingUseCase(gameRepo, rankingRepo)
+	bannerUseCase := usecaseAdmin.NewBannerUseCase(bannerRepo)
 	analyticsLogUseCase := usecaseApp.NewAnalyticsLogUseCase(searchLogRepo, gameViewLogRepo)
 	favoriteUseCase := usecaseApp.NewGameFavoriteUseCase(gameRepo, favoriteRepo)
 	publicGameUseCase := usecaseApp.NewGamePublicUseCase(
@@ -181,12 +184,14 @@ func main() {
 	contactInquiryHandler := handlerAdmin.NewContactInquiryHandler(contactUseCase)
 	accessLogHandler := handlerAdmin.NewAccessLogHandler(accessLogUseCase)
 	gameRankingHandler := handlerAdmin.NewGameRankingHandler(rankingUseCase)
+	bannerHandler := handlerAdmin.NewBannerHandler(bannerUseCase)
 	logFileHandler := handlerAdmin.NewLogFileHandler(backendFileLogger)
 	publicGameHandler := handlerApp.NewGameHandler(publicGameUseCase, analyticsLogUseCase)
 	publicGameFavoriteHandler := handlerApp.NewGameFavoriteHandler(favoriteUseCase)
 	publicAnnouncementHandler := handlerApp.NewAnnouncementHandler(publicAnnouncementUseCase)
 	publicContactHandler := handlerApp.NewContactHandler(publicContactUseCase)
 	siteHandler := handlerApp.NewSiteHandler(siteUseCase)
+	publicBannerHandler := handlerApp.NewBannerHandler(bannerRepo)
 
 	// 4. Echo インスタンスの生成と共通設定
 	e := echo.New()
@@ -223,6 +228,8 @@ func main() {
 			public.GET("/games", publicGameHandler.Search)
 			public.GET("/rankings", publicGameHandler.GetRanking)
 			public.GET("/rankings/page", publicGameHandler.GetRankingPage)
+			public.GET("/banners/:placement", publicBannerHandler.GetByPlacement)
+			public.POST("/banners/:id/click", publicBannerHandler.CountClick)
 			public.GET("/games/:code/favorite", publicGameFavoriteHandler.GetStatus)
 			public.POST("/games/:code/favorite", publicGameFavoriteHandler.Push)
 			public.GET("/games/:code", publicGameHandler.GetByCode)
@@ -236,6 +243,15 @@ func main() {
 		adminProtected := api.Group("/admin")
 		adminProtected.Use(customMiddleware.AdminGuard()) // 自作の認証ミドルウェア
 		{
+			// 🖼️ バナー管理
+			adminProtected.GET("/banners", bannerHandler.GetAll)
+			adminProtected.GET("/banners/:id", bannerHandler.GetByID)
+			adminProtected.POST("/banners", bannerHandler.Create)
+			adminProtected.PUT("/banners/:id", bannerHandler.Update)
+			adminProtected.DELETE("/banners/:id", bannerHandler.Delete)
+			adminProtected.POST("/banners/order", bannerHandler.UpdateOrder)
+			adminProtected.POST("/banners/:id/image", bannerHandler.UploadImage)
+
 			// 👥 Adminユーザー管理
 			adminProtected.GET("/admins", adminHandler.GetAll)
 			adminProtected.GET("/admins/:id", adminHandler.GetByID)
