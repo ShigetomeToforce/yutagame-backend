@@ -22,26 +22,30 @@ jobs:
       - name: Transfer backend files to EC2 temp dir
         run: |
           ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p /home/ubuntu/temp-backend"
-          rsync -avz --exclude '.git' -e "ssh -i ~/.ssh/id_rsa" ./ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/temp-backend/
+          # storageやlogsなどを除外して一時ディレクトリへ転送
+          rsync -avz --exclude '.git' --exclude 'storage' --exclude 'logs' -e "ssh -i ~/.ssh/id_rsa" ./ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/temp-backend/
 
       - name: Build, Migrate and Restart on EC2
         run: |
           ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             set -x
 
-            # 1. 正式なバックエンドディレクトリへファイルを反映（ストレージ等のシンボリックリンクや既存ログは保護）
+            # 1. 正式なバックエンドディレクトリへファイルを反映（storageやlogsは一切触らせない）
             sudo rsync -a --delete --exclude 'storage' --exclude 'logs' /home/ubuntu/temp-backend/ /opt/package-forest/app/backend/
 
             # 2. 所有者を package-forest に変更
             sudo chown -R package-forest:package-forest /opt/package-forest/app/backend/
 
-            # 3. package-forest ユーザーで Go のビルドを実行 (EC2のARM64環境で直接コンパイル)
+            # 3. 念のためストレージのシンボリックリンクが切れていないか再確認・貼直し
+            sudo -u package-forest ln -sfn /var/lib/package-forest/storage /opt/package-forest/app/backend/storage
+
+            # 4. package-forest ユーザーで Go のビルドを実行 (EC2のARM64環境で直接コンパイル)
             sudo -u package-forest bash -lc 'cd /opt/package-forest/app/backend && /usr/local/go/bin/go build -o package-forest-backend . && /usr/local/go/bin/go build -o package-forest-migrate ./cmd/migrate'
 
-            # 4. マイグレーションの実行
+            # 5. マイグレーションの実行
             sudo -u package-forest bash -lc 'set -a; source /etc/package-forest/backend.env; set +a; /opt/package-forest/app/backend/package-forest-migrate up'
 
-            # 5. アプリケーションの再起動
+            # 6. アプリケーションの再起動
             sudo systemctl restart package-forest-backend
 
             echo "Backend successfully deployed, built, migrated, and restarted!"
