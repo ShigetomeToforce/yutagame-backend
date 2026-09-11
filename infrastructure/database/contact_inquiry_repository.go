@@ -68,7 +68,7 @@ func (r *ContactInquiryRepository) CountDailyRange(ctx context.Context, from, to
 		Model(&model.ContactInquiry{}).
 		Select("DATE_FORMAT(created_at, '%Y-%m-%d') AS date, COUNT(*) AS count").
 		Where("created_at >= ? AND created_at < ?", from, to).
-		Group("DATE(created_at)").
+		Group("DATE_FORMAT(created_at, '%Y-%m-%d')").
 		Scan(&rows).Error
 	if err != nil {
 		return nil, err

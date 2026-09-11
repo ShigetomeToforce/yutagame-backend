@@ -66,7 +66,7 @@ func (r *SearchLogRepository) AggregateDailyRange(ctx context.Context, from, to 
 			SUM(CASE WHEN keyword_code <> '' THEN 1 ELSE 0 END) AS keyword_searches
 		`).
 		Where("created_at >= ? AND created_at < ?", from, to).
-		Group("DATE(created_at)").
+		Group("DATE_FORMAT(created_at, '%Y-%m-%d')").
 		Scan(&rows).Error
 	if err != nil {
 		return nil, err

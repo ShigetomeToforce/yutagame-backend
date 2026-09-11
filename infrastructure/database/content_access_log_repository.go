@@ -109,7 +109,7 @@ func (r *ContentAccessLogRepository) AggregateDailyRange(ctx context.Context, fr
 			SUM(CASE WHEN content_type = 'banner' THEN 1 ELSE 0 END) AS banner_views
 		`).
 		Where("created_at >= ? AND created_at < ?", from, to).
-		Group("DATE(created_at)").
+		Group("DATE_FORMAT(created_at, '%Y-%m-%d')").
 		Scan(&rows).Error
 	if err != nil {
 		return nil, err
