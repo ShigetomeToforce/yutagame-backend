@@ -39,7 +39,8 @@ jobs:
 
           # 既知のホストに追加してSSH接続エラーを防ぐ
           mkdir -p ~/.ssh
-          ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
+          ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts || true
+          chmod 600 ~/.ssh/known_hosts
 
           # 1. バイナリをEC2へ転送 (-i オプションで明示的に秘密鍵を指定)
           rsync -avz -e "ssh -i ~/.ssh/id_rsa" ./package-forest-backend $EC2_USER@$EC2_HOST:/opt/package-forest/app/backend/
