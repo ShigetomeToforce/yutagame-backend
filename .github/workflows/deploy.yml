@@ -16,11 +16,10 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25.0" # プロジェクトで利用しているGoのバージョンに合わせて調整
+          go-version: "1.25.0"
 
       - name: Build Go Backend Binary
         run: |
-          cd /opt/package-forest/app/backend  # ※バックエンドのソースコードがあるディレクトリパスに合わせて変更してください
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o package-forest-backend main.go
 
       - name: Set up SSH Key
@@ -38,7 +37,7 @@ jobs:
           ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
 
           # 1. バイナリを転送（storage/ ディレクトリはユーザーのアップロード画像を守るため絶対に対象外にする）
-          rsync -avz --exclude 'storage/' ./backend/package-forest-backend $EC2_USER@$EC2_HOST:/opt/package-forest/app/backend/
+          rsync -avz ./package-forest-backend $EC2_USER@$EC2_HOST:/opt/package-forest/app/backend/
 
           # 2. サーバー側で権限の調整とサービスの再起動をリモート実行
           ssh $EC2_USER@$EC2_HOST << 'EOF'
