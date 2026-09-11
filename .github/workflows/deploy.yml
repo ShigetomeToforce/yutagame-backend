@@ -39,8 +39,8 @@ jobs:
             # 3. 念のためストレージのシンボリックリンクが切れていないか再確認・貼直し
             sudo -u package-forest ln -sfn /var/lib/package-forest/storage /opt/package-forest/app/backend/storage
 
-            # 4. package-forest ユーザーで Go のビルドを実行 (VCSエラー回避のため -buildvcs=false を追加)
-            sudo -u package-forest bash -lc 'cd /opt/package-forest/app/backend && /usr/local/go/bin/go build -id -buildvcs=false -o package-forest-backend . && /usr/local/go/bin/go build -buildvcs=false -o package-forest-migrate ./cmd/migrate'
+            # 4. package-forest ユーザーで Go のビルドを実行 (-id フラグを削除)
+            sudo -u package-forest bash -lc 'cd /opt/package-forest/app/backend && /usr/local/go/bin/go build -buildvcs=false -o package-forest-backend . && /usr/local/go/bin/go build -buildvcs=false -o package-forest-migrate ./cmd/migrate'
 
             # 5. マイグレーションの実行
             sudo -u package-forest bash -lc 'set -a; source /etc/package-forest/backend.env; set +a; /opt/package-forest/app/backend/package-forest-migrate up'
