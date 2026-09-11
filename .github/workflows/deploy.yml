@@ -1,0 +1,49 @@
+name: Deploy to Production EC2
+
+on:
+  push:
+    branches:
+      - main # または master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.0" # プロジェクトで利用しているGoのバージョンに合わせて調整
+
+      - name: Build Go Backend Binary
+        run: |
+          cd /opt/package-forest/app/backend  # ※バックエンドのソースコードがあるディレクトリパスに合わせて変更してください
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o package-forest-backend main.go
+
+      - name: Set up SSH Key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Deploy to EC2 via rsync & SSH
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+        run: |
+          # 既知のホストに追加してSSH接続エラーを防ぐ
+          mkdir -p ~/.ssh
+          ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
+
+          # 1. バイナリを転送（storage/ ディレクトリはユーザーのアップロード画像を守るため絶対に対象外にする）
+          rsync -avz --exclude 'storage/' ./backend/package-forest-backend $EC2_USER@$EC2_HOST:/opt/package-forest/app/backend/
+
+          # 2. サーバー側で権限の調整とサービスの再起動をリモート実行
+          ssh $EC2_USER@$EC2_HOST << 'EOF'
+            sudo chown package-forest:package-forest /opt/package-forest/app/backend/package-forest-backend
+            sudo chmod +x /opt/package-forest/app/backend/package-forest-backend
+            sudo systemctl restart package-forest-backend
+            echo "Successfully deployed and restarted package-forest-backend!"
+          EOF
