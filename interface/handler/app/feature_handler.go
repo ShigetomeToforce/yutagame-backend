@@ -22,7 +22,7 @@ func NewFeatureHandler(featureUseCase *usecaseApp.FeaturePublicUseCase, analytic
 func (h *FeatureHandler) GetAll(c echo.Context) error {
 	items, err := h.featureUseCase.GetPublishedFeatures(c.Request().Context())
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	if items == nil {
 		items = []model.Feature{}
@@ -37,7 +37,7 @@ func (h *FeatureHandler) GetByCode(c echo.Context) error {
 	}
 	item, err := h.featureUseCase.GetPublishedFeatureByCode(c.Request().Context(), code)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	if item == nil {
 		return c.JSON(http.StatusNotFound, handler.ErrorResponse{Message: "指定された特集が見つかりませんでした。"})

@@ -28,7 +28,7 @@ func (h *BannerHandler) GetByPlacement(c echo.Context) error {
 		time.Now(),
 	)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	if items == nil {
 		items = []model.Banner{}
@@ -51,7 +51,7 @@ func (h *BannerHandler) GetByPlacement(c echo.Context) error {
 func (h *BannerHandler) CountClick(c echo.Context) error {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err := h.bannerRepo.IncrementClickCount(c.Request().Context(), id); err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	return c.NoContent(http.StatusNoContent)
 }

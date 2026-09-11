@@ -110,9 +110,7 @@ func (h *GameHandler) Create(c echo.Context) error {
 
 	ctx := c.Request().Context()
 	if err := h.gameUseCase.CreateGame(ctx, &game, req.KeywordIDs); err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{
-			Message: err.Error(),
-		})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusCreated, game)

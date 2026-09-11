@@ -36,7 +36,7 @@ func (h *MachineHandler) ExportCSV(c echo.Context) error {
 	ctx := c.Request().Context()
 	items, err := h.machineUseCase.GetAllMachines(ctx)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 
 	headers := []string{"id"}
@@ -45,7 +45,7 @@ func (h *MachineHandler) ExportCSV(c echo.Context) error {
 	buf := &bytes.Buffer{}
 	writer := csv.NewWriter(buf)
 	if err := writer.Write(headers); err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 
 	for _, item := range items {
@@ -74,12 +74,12 @@ func (h *MachineHandler) ExportCSV(c echo.Context) error {
 			}
 		}
 		if err := writer.Write(row); err != nil {
-			return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+			return handler.RespondError(c, http.StatusInternalServerError, err)
 		}
 	}
 	writer.Flush()
 	if err := writer.Error(); err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 
 	payload, err := convertCSVEncoding(buf.Bytes(), encoding)
@@ -124,7 +124,7 @@ func (h *MachineHandler) PreviewImportCSV(c echo.Context) error {
 	ctx := c.Request().Context()
 	preview, err := h.machineUseCase.BuildCSVPreview(ctx, rows)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, preview)

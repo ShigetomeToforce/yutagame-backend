@@ -115,7 +115,7 @@ func (h *FeatureHandler) Delete(c echo.Context) error {
 func (h *FeatureHandler) GetPublishedForOrdering(c echo.Context) error {
 	items, err := h.featureUseCase.GetPublishedFeaturesForOrdering(c.Request().Context())
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	return c.JSON(http.StatusOK, items)
 }
@@ -151,7 +151,7 @@ func (h *FeatureHandler) UploadThumbnailImage(c echo.Context) error {
 	}
 	updated, err := h.featureUseCase.UpdateThumbnailImage(c.Request().Context(), id, imageKey)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	if feature.ThumbnailImageKey != nil && *feature.ThumbnailImageKey != imageKey {
 		_ = deleteStoredImage(*feature.ThumbnailImageKey)

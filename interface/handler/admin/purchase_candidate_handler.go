@@ -50,7 +50,7 @@ func (h *PurchaseCandidateHandler) GetAll(c echo.Context) error {
 	}
 	items, err := h.useCase.GetAllByPurchased(c.Request().Context(), isPurchased)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	return c.JSON(http.StatusOK, items)
 }
@@ -138,7 +138,7 @@ func (h *PurchaseCandidateHandler) UploadImage(c echo.Context) error {
 	}
 	updated, err := h.useCase.UpdateImage(c.Request().Context(), id, imageKey)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	if item.ImageKey != nil && *item.ImageKey != imageKey {
 		_ = deleteStoredImage(*item.ImageKey)
@@ -154,7 +154,7 @@ func (h *PurchaseCandidateHandler) DeleteImage(c echo.Context) error {
 	}
 	updated, err := h.useCase.DeleteImage(c.Request().Context(), id)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	if item.ImageKey != nil {
 		_ = deleteStoredImage(*item.ImageKey)

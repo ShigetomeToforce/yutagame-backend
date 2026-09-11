@@ -137,7 +137,7 @@ func (h *AnnouncementHandler) GetPublishedForOrdering(c echo.Context) error {
 	ctx := c.Request().Context()
 	items, err := h.announcementUseCase.GetPublishedAnnouncementsForOrdering(ctx)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	return c.JSON(http.StatusOK, items)
 }

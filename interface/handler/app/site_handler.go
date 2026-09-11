@@ -20,7 +20,7 @@ func (h *SiteHandler) GetSitemap(c echo.Context) error {
 	ctx := c.Request().Context()
 	data, err := h.siteUseCase.GetSitemapData(ctx)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	return c.JSON(http.StatusOK, data)
 }

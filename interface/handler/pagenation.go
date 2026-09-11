@@ -29,7 +29,7 @@ func HandleListOrPagination[T any, F any](
 	if pageStr == "" {
 		data, err := getAllFn(ctx)
 		if err != nil {
-			return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+			return RespondError(c, http.StatusInternalServerError, err)
 		}
 		return c.JSON(http.StatusOK, data)
 	}
@@ -49,7 +49,7 @@ func HandleListOrPagination[T any, F any](
 
 	data, totalCount, totalPages, err := getPageFn(ctx, page, limit, filter)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Message: err.Error()})
+		return RespondError(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, PaginatedResponse[T]{

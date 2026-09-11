@@ -45,7 +45,7 @@ func (h *BannerHandler) Create(c echo.Context) error {
 func (h *BannerHandler) GetAll(c echo.Context) error {
 	items, err := h.useCase.GetAll(c.Request().Context())
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	if items == nil {
 		items = []model.Banner{}
@@ -57,7 +57,7 @@ func (h *BannerHandler) GetByID(c echo.Context) error {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	banner, err := h.useCase.GetByID(c.Request().Context(), id)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	if banner == nil {
 		return c.JSON(http.StatusNotFound, handler.ErrorResponse{Message: "指定されたバナーが見つかりませんでした。"})
@@ -85,7 +85,7 @@ func (h *BannerHandler) Delete(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, handler.ErrorResponse{Message: err.Error()})
 	}
 	if err := deleteStoredImage(banner.ImageKey); err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	return c.NoContent(http.StatusNoContent)
 }
@@ -106,7 +106,7 @@ func (h *BannerHandler) UploadImage(c echo.Context) error {
 	}
 	updated, err := h.useCase.UpdateImage(c.Request().Context(), id, imageKey)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	if banner.ImageKey != imageKey {
 		_ = deleteStoredImage(banner.ImageKey)

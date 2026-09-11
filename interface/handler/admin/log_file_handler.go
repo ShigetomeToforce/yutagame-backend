@@ -22,7 +22,7 @@ func NewLogFileHandler(logger *filelog.DailyLogger) *LogFileHandler {
 
 func (h *LogFileHandler) GetAll(c echo.Context) error {
 	if err := h.logger.CleanupOldFiles(logRetentionDays); err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 
 	page := 1
@@ -49,7 +49,7 @@ func (h *LogFileHandler) GetAll(c echo.Context) error {
 		Limit: limit,
 	})
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, result)

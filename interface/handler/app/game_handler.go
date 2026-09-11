@@ -56,7 +56,7 @@ func (h *GameHandler) GetMachines(c echo.Context) error {
 	ctx := c.Request().Context()
 	items, err := h.gameUseCase.GetMachines(ctx)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	return c.JSON(http.StatusOK, items)
 }
@@ -65,7 +65,7 @@ func (h *GameHandler) GetGenres(c echo.Context) error {
 	ctx := c.Request().Context()
 	items, err := h.gameUseCase.GetGenres(ctx)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	return c.JSON(http.StatusOK, items)
 }
@@ -74,7 +74,7 @@ func (h *GameHandler) GetManufacturers(c echo.Context) error {
 	ctx := c.Request().Context()
 	items, err := h.gameUseCase.GetManufacturers(ctx)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	return c.JSON(http.StatusOK, items)
 }
@@ -83,7 +83,7 @@ func (h *GameHandler) GetKeywords(c echo.Context) error {
 	ctx := c.Request().Context()
 	items, err := h.gameUseCase.GetKeywords(ctx)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	return c.JSON(http.StatusOK, items)
 }
@@ -91,7 +91,7 @@ func (h *GameHandler) GetKeywords(c echo.Context) error {
 func (h *GameHandler) GetSiteStats(c echo.Context) error {
 	stats, err := h.gameUseCase.GetSiteStats(c.Request().Context())
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	return c.JSON(http.StatusOK, stats)
 }
@@ -104,7 +104,7 @@ func (h *GameHandler) GetTop(c echo.Context) error {
 	ctx := c.Request().Context()
 	topContents, err := h.gameUseCase.GetTopContents(ctx, releaseLimit, recentLimit, randomLimit)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, topContents)
@@ -126,7 +126,7 @@ func (h *GameHandler) Search(c echo.Context) error {
 	ctx := c.Request().Context()
 	games, totalCount, totalPages, err := h.gameUseCase.SearchGames(ctx, page, limit, filter)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 
 	if h.analyticsLogUseCase != nil {
@@ -161,7 +161,7 @@ func (h *GameHandler) GetByCode(c echo.Context) error {
 	ctx := c.Request().Context()
 	game, err := h.gameUseCase.GetGameByCode(ctx, code)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	if game == nil {
 		return c.JSON(http.StatusNotFound, handler.ErrorResponse{Message: "指定されたゲームが見つかりませんでした。"})
@@ -184,7 +184,7 @@ func (h *GameHandler) GetRanking(c echo.Context) error {
 	ctx := c.Request().Context()
 	items, err := h.gameUseCase.GetActiveRanking(ctx)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	return c.JSON(http.StatusOK, items)
 }
@@ -200,7 +200,7 @@ func (h *GameHandler) GetRankingPage(c echo.Context) error {
 		limit,
 	)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	return c.JSON(http.StatusOK, result)
 }

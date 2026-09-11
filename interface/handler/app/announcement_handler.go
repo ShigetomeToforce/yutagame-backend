@@ -22,7 +22,7 @@ func (h *AnnouncementHandler) GetAll(c echo.Context) error {
 	ctx := c.Request().Context()
 	items, err := h.announcementUseCase.GetPublishedAnnouncements(ctx)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	return c.JSON(http.StatusOK, items)
 }
@@ -32,7 +32,7 @@ func (h *AnnouncementHandler) GetByID(c echo.Context) error {
 	ctx := c.Request().Context()
 	item, err := h.announcementUseCase.GetPublishedAnnouncementByID(ctx, id)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	if item == nil {
 		return c.JSON(http.StatusNotFound, handler.ErrorResponse{Message: "指定されたお知らせが見つかりませんでした。"})

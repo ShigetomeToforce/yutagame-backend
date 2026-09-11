@@ -20,7 +20,7 @@ func NewAccessLogHandler(accessLogUseCase *usecaseAdmin.AccessLogUseCase) *Acces
 func (h *AccessLogHandler) GetDashboard(c echo.Context) error {
 	dashboard, err := h.accessLogUseCase.GetDashboard(c.Request().Context())
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 	return c.JSON(http.StatusOK, dashboard)
 }
@@ -40,7 +40,7 @@ func (h *AccessLogHandler) GetSearchBreakdown(c echo.Context) error {
 		limit,
 	)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, result)
@@ -52,7 +52,7 @@ func (h *AccessLogHandler) GetMonthlyTable(c echo.Context) error {
 		c.QueryParam("month"),
 	)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, result)
@@ -74,7 +74,7 @@ func (h *AccessLogHandler) GetMachineSearchDashboard(c echo.Context) error {
 		limit,
 	)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, result)
@@ -97,7 +97,7 @@ func (h *AccessLogHandler) GetSearchRankingDashboard(c echo.Context) error {
 		limit,
 	)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, result)
@@ -119,7 +119,7 @@ func (h *AccessLogHandler) GetGameViewDashboard(c echo.Context) error {
 		limit,
 	)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, handler.ErrorResponse{Message: err.Error()})
+		return handler.RespondError(c, http.StatusInternalServerError, err)
 	}
 
 	return c.JSON(http.StatusOK, result)
