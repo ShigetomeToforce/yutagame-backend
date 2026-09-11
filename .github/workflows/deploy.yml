@@ -1,4 +1,4 @@
-name: Deploy Backend to EC2
+name: Deploy Backend to EC2 via SSM
 
 on:
   push:
@@ -12,41 +12,73 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up SSH Key
+      # 1. AWS認証の設定
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # 2. Session Manager プラグインのインストール（ubuntu-latest用）
+      - name: Install Session Manager Plugin
+        run: |
+          curl "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" -o "session-manager-plugin.deb"
+          sudo dpkg -i session-manager-plugin.deb
+
+      # 3. SSM経由でバックグラウンドのポートフォワーディング（トンネル）を開始
+      - name: Start SSM Port Forwarding Tunnel
+        run: |
+          # ローカルのポート 2222 を、EC2のポート 22 に転送するトンネルをバックグラウンドで起動
+          aws ssm start-session \
+            --target ${{ secrets.EC2_INSTANCE_ID }} \
+            --document-name AWS-StartPortForwardingSessionToRemoteHost \
+            --parameters '{"portNumber":["22"],"localPortNumber":["2222"],"host":["localhost"]}' &
+
+          # トンネルが確立するのを数秒待つ
+          sleep 3
+
+      - name: Set up SSH Key (for localhost tunneling)
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts || true
+          # 接続先を IP ではなく localhostのポート 2222 に指定する設定を記述
+          echo "Host ec2-ssm" >> ~/.ssh/config
+          echo "  HostName localhost" >> ~/.ssh/config
+          echo "  Port 2222" >> ~/.ssh/config
+          echo "  User ${{ secrets.EC2_USER }}" >> ~/.ssh/config
+          echo "  IdentityFile ~/.ssh/id_rsa" >> ~/.ssh/config
+          echo "  StrictHostKeyChecking no" >> ~/.ssh/config
 
       - name: Transfer backend files to EC2 temp dir
         run: |
-          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p /home/ubuntu/temp-backend"
+          ssh ec2-ssm "mkdir -p /home/ubuntu/temp-backend"
           # storageやlogsなどを除外して一時ディレクトリへ転送
-          rsync -avz --exclude '.git' --exclude 'storage' --exclude 'logs' -e "ssh -i ~/.ssh/id_rsa" ./ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/temp-backend/
+          rsync -avz --exclude '.git' --exclude 'storage' --exclude 'logs' -e "ssh" ./ ec2-ssm:/home/ubuntu/temp-backend/
 
       - name: Build, Migrate and Restart on EC2
         run: |
-          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          ssh ec2-ssm << 'EOF'
             set -x
 
-            # 1. 正式なバックエンドディレクトリへファイルを反映（storageやlogsは一切触らせない）
+            # 1. 正式なバックエンドディレクトリへファイルを反映
             sudo rsync -a --delete --exclude 'storage' --exclude 'logs' /home/ubuntu/temp-backend/ /opt/package-forest/app/backend/
 
-            # 2. 所有者を package-forest に変更
+            # 2. 所有者を変更
             sudo chown -R package-forest:package-forest /opt/package-forest/app/backend/
 
-            # 3. 念のためストレージのシンボリックリンクが切れていないか再確認・貼直し
+            # 3. シンボリックリンクの確認
             sudo -u package-forest ln -sfn /var/lib/package-forest/storage /opt/package-forest/app/backend/storage
 
-            # 4. package-forest ユーザーで Go のビルドを実行 (-id フラグを削除)
+            # 4. ビルド
             sudo -u package-forest bash -lc 'cd /opt/package-forest/app/backend && /usr/local/go/bin/go build -buildvcs=false -o package-forest-backend . && /usr/local/go/bin/go build -buildvcs=false -o package-forest-migrate ./cmd/migrate'
 
-            # 5. マイグレーションの実行
+            # 5. マイグレーション
             sudo -u package-forest bash -lc 'set -a; source /etc/package-forest/backend.env; set +a; /opt/package-forest/app/backend/package-forest-migrate up'
 
-            # 6. アプリケーションの再起動
+            # 6. 再起動
             sudo systemctl restart package-forest-backend
 
-            echo "Backend successfully deployed, built, migrated, and restarted!"
+            echo "Backend successfully deployed, built, migrated, and restarted via SSM!"
           EOF
