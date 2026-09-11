@@ -46,7 +46,7 @@ jobs:
           ssh -i ~/.ssh/id_rsa $EC2_USER@$EC2_HOST "mkdir -p /home/ubuntu/temp-build"
           rsync -avz -e "ssh -i ~/.ssh/id_rsa" ./package-forest-backend $EC2_USER@$EC2_HOST:/home/ubuntu/temp-build/
 
-          # 2. EC2側で sudo を使って正式なアプリディレクトリへ移動し、権限調整・サービス再起動を行う
+          # 2. EC2側で sudo を使って正式なアプリディレクトリへの移動、マイグレーション、サービス再起動を行う
           ssh -i ~/.ssh/id_rsa $EC2_USER@$EC2_HOST << 'EOF'
             # 正式なディレクトリへバイナリを移動
             sudo mv /home/ubuntu/temp-build/package-forest-backend /opt/package-forest/app/backend/package-forest-backend
@@ -55,7 +55,10 @@ jobs:
             sudo chown package-forest:package-forest /opt/package-forest/app/backend/package-forest-backend
             sudo chmod +x /opt/package-forest/app/backend/package-forest-backend
 
-            # アプリケーションの再起動
+            # 3. マイグレーションの実行 (package-forest ユーザーで環境変数を読み込んで実行)
+            sudo -u package-forest bash -lc 'set -a; source /etc/package-forest/backend.env; set +a; /opt/package-forest/app/backend/package-forest-migrate up'
+
+            # 4. アプリケーションの再起動
             sudo systemctl restart package-forest-backend
-            echo "Successfully deployed and restarted package-forest-backend!"
+            echo "Successfully deployed, migrated, and restarted package-forest-backend!"
           EOF
