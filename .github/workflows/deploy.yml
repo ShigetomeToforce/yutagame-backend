@@ -71,11 +71,20 @@ jobs:
             # 3. シンボリックリンクの確認
             sudo -u package-forest ln -sfn /var/lib/package-forest/storage /opt/package-forest/app/backend/storage
 
-            # 4. ビルド
-            sudo -u package-forest bash -lc 'cd /opt/package-forest/app/backend && /usr/local/go/bin/go build -buildvcs=false -o package-forest-backend . && /usr/local/go/bin/go build -buildvcs=false -o package-forest-migrate ./cmd/migrate'
+            # 4. ビルド & 5. マイグレーション
+            sudo -u package-forest bash -lc '
+              cd /opt/package-forest/app/backend
 
-            # 5. マイグレーション
-            sudo -u package-forest bash -lc 'set -a; source /etc/package-forest/backend.env; set +a; /opt/package-forest/app/backend/package-forest-migrate up'
+              # ビルド
+              /usr/local/go/bin/go build -buildvcs=false -o package-forest-backend .
+              /usr/local/go/bin/go build -buildvcs=false -o package-forest-migrate ./cmd/migrate
+
+              # マイグレーション（環境変数を読み込んで同じディレクトリから実行）
+              set -a
+              source /etc/package-forest/backend.env
+              set +a
+              ./package-forest-migrate up
+            '
 
             # 6. 再起動
             sudo systemctl restart package-forest-backend
