@@ -10,14 +10,15 @@ AWSアカウント作成からWeb公開までの具体的な初心者向け手�
 1台にアプリケーション、MySQL、リバースプロキシを配置する低コスト構成から始める。
 
 ローカル環境は従来どおり `init/`
-のseedデータを使う。本番環境ではseedデータを流さず、アプリ起動時のAutoMigrateで空DBのテーブルを作成し、デフォルト管理者だけを冪等に投入する。
+のseedデータを使う。本番環境ではseedデータを流さず、goose
+migrationで空DBのテーブルを作成し、デフォルト管理者だけを冪等に投入する。
 
 ## 本番DB初期化
 
-バックエンド起動時に以下が実行される。
+本番では `cmd/migrate` から以下を実行する。
 
-- GORM AutoMigrateによるテーブル作成/差分反映
-- `admins.id = 1` のデフォルト管理者作成/更新
+- gooseによるSQL migration適用
+- `admins.id = 1` のデフォルト管理者作成（既存レコードは上書きしない）
 
 デフォルト管理者は以下の環境変数で上書きできる。
 
@@ -28,11 +29,11 @@ AWSアカウント作成からWeb公開までの具体的な初心者向け手�
 
 未設定時はローカルseedと同じ管理者が作成される。
 
-CI/CDや初回セットアップでマイグレーションだけ実行したい場合は、`MIGRATE_ONLY=true`
-を指定する。
+CI/CDや初回セットアップでは、backendとは別にmigration用バイナリをビルドして実行する。
 
 ```bash
-MIGRATE_ONLY=true ./yutagame-backend
+go build -o yutagame-migrate ./cmd/migrate
+./yutagame-migrate up
 ```
 
 ## 最小AWS構成
@@ -192,16 +193,17 @@ AgentでCPU/メモリ/ディスクを送り、ディスク80%超過でアラー�
 最初から全部をIaC化しすぎると重くなるため、まずはEC2/Security Group/Route
 53/S3だけをOpenTofu化するのが現実的。
 
-## マイグレーション管理の今後
+## マイグレーション管理
 
-現在はGORM
-AutoMigrateで差分反映する。初期運用はこれで十分だが、本番データが増えてきたらSQL
-migration管理へ移行する。
+本番はgooseでSQL migrationを管理する。適用済みversionはDB内の `goose_db_version`
+に保存される。
 
-候補:
+基本操作:
 
-- goose
-- golang-migrate
-- atlas
+```bash
+./yutagame-migrate status
+./yutagame-migrate up
+./yutagame-migrate down
+```
 
-移行タイミングは、破壊的変更、カラムrename、データ移行を伴う変更が増えた時点が目安。
+本番では `down` はバックアップ取得後に慎重に使う。

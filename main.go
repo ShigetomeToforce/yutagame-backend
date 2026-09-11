@@ -26,6 +26,45 @@ import (
 	echoSwagger "github.com/swaggo/echo-swagger" //
 )
 
+func runLegacyAutoMigrate(db *gorm.DB) error {
+	if err := db.Exec("DROP TABLE IF EXISTS access_logs").Error; err != nil {
+		return err
+	}
+	if err := db.AutoMigrate(
+		&model.Admin{},
+		&model.User{},
+		&model.Manufacturer{},
+		&model.Genre{},
+		&model.Keyword{},
+		&model.Machine{},
+		&model.Game{},
+		&model.GameAffiliate{},
+		&model.Announcement{},
+		&model.Feature{},
+		&model.FeatureGame{},
+		&model.ContactInquiry{},
+		&model.GameRecommendation{},
+		&model.GameFavorite{},
+		&model.SearchLog{},
+		&model.GameViewLog{},
+		&model.ContentAccessLog{},
+		&model.Banner{},
+		&model.PurchaseCandidate{},
+	); err != nil {
+		return err
+	}
+	if err := db.Exec("ALTER TABLE features CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci").Error; err != nil {
+		return err
+	}
+	if err := db.Exec("ALTER TABLE feature_games CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci").Error; err != nil {
+		return err
+	}
+	if err := database.DropLegacyAnalyticsColumns(db); err != nil {
+		return err
+	}
+	return nil
+}
+
 // @title           Yutagame Backend API
 // @version         1.0
 // @description     所持ゲーム管理システムのバックエンドAPI仕様書
@@ -57,93 +96,18 @@ func main() {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
 
-	if err := db.Exec("DROP TABLE IF EXISTS access_logs").Error; err != nil {
-		log.Fatalf("failed to drop legacy access_logs: %v", err)
-	}
-
-	if err := db.AutoMigrate(
-		&model.Admin{},
-		&model.User{},
-		&model.Manufacturer{},
-		&model.Genre{},
-		&model.Keyword{},
-		&model.Machine{},
-		&model.Game{},
-		&model.GameAffiliate{},
-		&model.Announcement{},
-		&model.Feature{},
-		&model.FeatureGame{},
-		&model.ContactInquiry{},
-		&model.GameRecommendation{},
-		&model.GameFavorite{},
-		&model.SearchLog{},
-		&model.GameViewLog{},
-		&model.ContentAccessLog{},
-		&model.Banner{},
-		&model.PurchaseCandidate{},
-	); err != nil {
-		log.Fatalf("failed to auto migrate: %v", err)
+	if os.Getenv("RUN_AUTO_MIGRATE") == "true" {
+		if err := runLegacyAutoMigrate(db); err != nil {
+			log.Fatalf("failed to auto migrate: %v", err)
+		}
 	}
 
 	if err := database.EnsureDefaultAdmin(db); err != nil {
 		log.Fatalf("failed to ensure default admin: %v", err)
 	}
 
-	if err := db.Exec("ALTER TABLE features CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci").Error; err != nil {
-		log.Fatalf("failed to convert features charset: %v", err)
-	}
-	if err := db.Exec("ALTER TABLE feature_games CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci").Error; err != nil {
-		log.Fatalf("failed to convert feature_games charset: %v", err)
-	}
-
-	if err := db.Exec(`
-		CREATE TABLE IF NOT EXISTS game_ranking_active_entries (
-			id BIGINT NOT NULL AUTO_INCREMENT,
-			game_id BIGINT NOT NULL,
-			display_rank INT NOT NULL,
-			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			PRIMARY KEY (id),
-			UNIQUE KEY uq_game_ranking_active_game_id (game_id)
-		)
-	`).Error; err != nil {
-		log.Fatalf("failed to create active ranking table: %v", err)
-	}
-
-	if err := db.Exec(`
-		CREATE TABLE IF NOT EXISTS game_ranking_draft_entries (
-			id BIGINT NOT NULL AUTO_INCREMENT,
-			game_id BIGINT NOT NULL,
-			display_rank INT NOT NULL,
-			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			PRIMARY KEY (id),
-			UNIQUE KEY uq_game_ranking_draft_game_id (game_id)
-		)
-	`).Error; err != nil {
-		log.Fatalf("failed to create draft ranking table: %v", err)
-	}
-
-	if err := db.Exec(`
-		CREATE TABLE IF NOT EXISTS game_ranking_previous_entries (
-			id BIGINT NOT NULL AUTO_INCREMENT,
-			game_id BIGINT NOT NULL,
-			display_rank INT NOT NULL,
-			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			PRIMARY KEY (id),
-			UNIQUE KEY uq_game_ranking_previous_game_id (game_id)
-		)
-	`).Error; err != nil {
-		log.Fatalf("failed to create previous ranking table: %v", err)
-	}
-
-	if err := database.DropLegacyAnalyticsColumns(db); err != nil {
-		log.Fatalf("failed to drop legacy analytics columns: %v", err)
-	}
-
 	if os.Getenv("MIGRATE_ONLY") == "true" {
-		log.Println("migration completed")
+		log.Println("MIGRATE_ONLY on main is deprecated. Use: go run ./cmd/migrate up")
 		return
 	}
 
