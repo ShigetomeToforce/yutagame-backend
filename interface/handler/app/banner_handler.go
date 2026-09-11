@@ -21,6 +21,14 @@ func NewBannerHandler(bannerRepo *database.BannerRepository, analyticsLogUseCase
 	return &BannerHandler{bannerRepo: bannerRepo, analyticsLogUseCase: analyticsLogUseCase}
 }
 
+// GetByPlacement godoc
+// @Summary 表示位置別バナー取得
+// @Tags Public Banners
+// @Produce json
+// @Param placement path string true "表示位置"
+// @Param visitorId query string false "匿名訪問者ID"
+// @Success 200 {array} model.Banner
+// @Router /app/banners/{placement} [get]
 func (h *BannerHandler) GetByPlacement(c echo.Context) error {
 	items, err := h.bannerRepo.FindVisibleByPlacement(
 		c.Request().Context(),
@@ -48,6 +56,12 @@ func (h *BannerHandler) GetByPlacement(c echo.Context) error {
 	return c.JSON(http.StatusOK, items)
 }
 
+// CountClick godoc
+// @Summary バナークリック記録
+// @Tags Public Banners
+// @Param id path int true "バナーID"
+// @Success 204
+// @Router /app/banners/{id}/click [post]
 func (h *BannerHandler) CountClick(c echo.Context) error {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err := h.bannerRepo.IncrementClickCount(c.Request().Context(), id); err != nil {

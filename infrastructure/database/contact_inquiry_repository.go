@@ -59,6 +59,27 @@ func (r *ContactInquiryRepository) CountRange(ctx context.Context, from, to time
 	return count, err
 }
 
+func (r *ContactInquiryRepository) CountDailyRange(ctx context.Context, from, to time.Time) (map[string]int64, error) {
+	var rows []struct {
+		Date  string
+		Count int64
+	}
+	err := r.db.WithContext(ctx).
+		Model(&model.ContactInquiry{}).
+		Select("DATE_FORMAT(created_at, '%Y-%m-%d') AS date, COUNT(*) AS count").
+		Where("created_at >= ? AND created_at < ?", from, to).
+		Group("DATE(created_at)").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string]int64, len(rows))
+	for _, row := range rows {
+		result[row.Date] = row.Count
+	}
+	return result, nil
+}
+
 func (r *ContactInquiryRepository) Update(ctx context.Context, inquiry *model.ContactInquiry) error {
 	return r.db.WithContext(ctx).Save(inquiry).Error
 }

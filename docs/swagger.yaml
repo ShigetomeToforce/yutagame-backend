@@ -131,6 +131,150 @@ definitions:
         description: 更新処理時、空文字の場合は「変更なし」として取り扱われます
         type: string
     type: object
+  app.CatalogItem:
+    properties:
+      code:
+        type: string
+      gameCount:
+        type: integer
+      imageKey:
+        type: string
+      name:
+        type: string
+    type: object
+  app.ContactRequest:
+    properties:
+      email:
+        type: string
+      message:
+        type: string
+      name:
+        type: string
+      subject:
+        type: string
+    type: object
+  app.FavoriteRankingItem:
+    properties:
+      count:
+        type: integer
+      game:
+        $ref: '#/definitions/model.Game'
+    type: object
+  app.GameFavoriteRequest:
+    properties:
+      visitorId:
+        type: string
+    type: object
+  app.GameFavoriteResult:
+    properties:
+      alreadyVoted:
+        type: boolean
+      count:
+        type: integer
+      favoriteDate:
+        type: string
+      gameId:
+        type: integer
+    type: object
+  app.GameRecommendationRequest:
+    properties:
+      gameName:
+        type: string
+      reason:
+        type: string
+    type: object
+  app.KeywordItem:
+    properties:
+      code:
+        type: string
+      gameCount:
+        type: integer
+      name:
+        type: string
+    type: object
+  app.PageViewRequest:
+    properties:
+      pagePath:
+        type: string
+      visitorId:
+        type: string
+    type: object
+  app.PaginatedGameResponse:
+    properties:
+      data: {}
+      limit:
+        type: integer
+      page:
+        type: integer
+      totalCount:
+        type: integer
+      totalPages:
+        type: integer
+    type: object
+  app.PublicRankingResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.Game'
+        type: array
+      limit:
+        type: integer
+      page:
+        type: integer
+      totalCount:
+        type: integer
+      totalPages:
+        type: integer
+    type: object
+  app.SiteStats:
+    properties:
+      gameCount:
+        type: integer
+      totalListPrice:
+        type: integer
+    type: object
+  app.SitemapData:
+    properties:
+      announcementIds:
+        items:
+          type: integer
+        type: array
+      featureCodes:
+        items:
+          type: string
+        type: array
+      gameCodes:
+        items:
+          type: string
+        type: array
+    type: object
+  app.TopContents:
+    properties:
+      favoriteRanking:
+        items:
+          $ref: '#/definitions/app.FavoriteRankingItem'
+        type: array
+      randomPicks:
+        items:
+          $ref: '#/definitions/model.Game'
+        type: array
+      rankingTop20:
+        items:
+          $ref: '#/definitions/model.Game'
+        type: array
+      recentlyReleased:
+        items:
+          $ref: '#/definitions/model.Game'
+        type: array
+      recentlyUpdated:
+        items:
+          $ref: '#/definitions/model.Game'
+        type: array
+      releaseToday:
+        items:
+          $ref: '#/definitions/model.Game'
+        type: array
+    type: object
   handler.ErrorResponse:
     properties:
       message:
@@ -235,8 +379,146 @@ definitions:
       updatedAt:
         type: string
     type: object
+  model.Announcement:
+    properties:
+      accessCount:
+        type: integer
+      bodyHtml:
+        type: string
+      createdAt:
+        type: string
+      displayOrder:
+        description: DisplayOrder は公開中のお知らせ同士の表示優先度（1以上が手動指定、0は未指定）
+        type: integer
+      excerpt:
+        type: string
+      id:
+        type: integer
+      publishEndAt:
+        type: string
+      publishStartAt:
+        type: string
+      publishedAt:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  model.Banner:
+    properties:
+      accessCount:
+        type: integer
+      clickCount:
+        type: integer
+      createdAt:
+        type: string
+      displayOrder:
+        type: integer
+      endsAt:
+        type: string
+      id:
+        type: integer
+      imageKey:
+        type: string
+      linkUrl:
+        type: string
+      openInNewTab:
+        type: boolean
+      placement:
+        type: string
+      startsAt:
+        type: string
+      title:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  model.ContactInquiry:
+    properties:
+      adminNote:
+        type: string
+      createdAt:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      message:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+      subject:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  model.Feature:
+    properties:
+      accessCount:
+        type: integer
+      bodyHtml:
+        type: string
+      code:
+        type: string
+      createdAt:
+        type: string
+      displayOrder:
+        type: integer
+      excerpt:
+        type: string
+      featureGames:
+        items:
+          $ref: '#/definitions/model.FeatureGame'
+        type: array
+      games:
+        items:
+          $ref: '#/definitions/model.Game'
+        type: array
+      id:
+        type: integer
+      publishEndAt:
+        type: string
+      publishStartAt:
+        type: string
+      publishedAt:
+        type: string
+      status:
+        type: string
+      thumbnailImageKey:
+        type: string
+      title:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  model.FeatureGame:
+    properties:
+      createdAt:
+        type: string
+      displayOrder:
+        type: integer
+      featureId:
+        type: integer
+      game:
+        $ref: '#/definitions/model.Game'
+      gameId:
+        type: integer
+      id:
+        type: integer
+      updatedAt:
+        type: string
+    type: object
   model.Game:
     properties:
+      affiliates:
+        items:
+          $ref: '#/definitions/model.GameAffiliate'
+        type: array
       catchCopy:
         type: string
       code:
@@ -282,6 +564,12 @@ definitions:
         type: string
       overview:
         type: string
+      previousRank:
+        type: integer
+      rank:
+        type: integer
+      rankingCount:
+        type: integer
       releaseDate:
         type: string
       subCatch:
@@ -291,6 +579,38 @@ definitions:
       updatedAt:
         type: string
       youtubeUrl:
+        type: string
+    type: object
+  model.GameAffiliate:
+    properties:
+      category:
+        type: string
+      createdAt:
+        type: string
+      gameId:
+        type: integer
+      id:
+        type: integer
+      updatedAt:
+        type: string
+      url:
+        type: string
+    type: object
+  model.GameRecommendation:
+    properties:
+      adminNote:
+        type: string
+      createdAt:
+        type: string
+      gameName:
+        type: string
+      id:
+        type: integer
+      reason:
+        type: string
+      status:
+        type: string
+      updatedAt:
         type: string
     type: object
   model.Genre:
@@ -1507,6 +1827,495 @@ paths:
       summary: ユーザー情報更新
       tags:
       - Users
+  /app/announcements:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Announcement'
+            type: array
+      summary: 公開中のお知らせ一覧取得
+      tags:
+      - Public Announcements
+  /app/announcements/{id}:
+    get:
+      parameters:
+      - description: お知らせID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 匿名訪問者ID
+        in: query
+        name: visitorId
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Announcement'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: 公開中のお知らせ詳細取得
+      tags:
+      - Public Announcements
+  /app/banners/{id}/click:
+    post:
+      parameters:
+      - description: バナーID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+      summary: バナークリック記録
+      tags:
+      - Public Banners
+  /app/banners/{placement}:
+    get:
+      parameters:
+      - description: 表示位置
+        in: path
+        name: placement
+        required: true
+        type: string
+      - description: 匿名訪問者ID
+        in: query
+        name: visitorId
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Banner'
+            type: array
+      summary: 表示位置別バナー取得
+      tags:
+      - Public Banners
+  /app/catalog/genres:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/app.CatalogItem'
+            type: array
+      summary: ジャンルカタログ取得
+      tags:
+      - Public Games
+  /app/catalog/machines:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/app.CatalogItem'
+            type: array
+      summary: 機種カタログ取得
+      tags:
+      - Public Games
+  /app/catalog/manufacturers:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/app.CatalogItem'
+            type: array
+      summary: メーカーカタログ取得
+      tags:
+      - Public Games
+  /app/contacts:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: お問い合わせ内容
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/app.ContactRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.ContactInquiry'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: お問い合わせ送信
+      tags:
+      - Public Contacts
+  /app/features:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Feature'
+            type: array
+      summary: 公開中の特集一覧取得
+      tags:
+      - Public Features
+  /app/features/{code}:
+    get:
+      parameters:
+      - description: 特集コード
+        in: path
+        name: code
+        required: true
+        type: string
+      - description: 匿名訪問者ID
+        in: query
+        name: visitorId
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Feature'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: 公開中の特集詳細取得
+      tags:
+      - Public Features
+  /app/game-recommendations:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 推薦内容
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/app.GameRecommendationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.GameRecommendation'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: ゲーム推薦を送信
+      tags:
+      - Public Recommendations
+  /app/games:
+    get:
+      parameters:
+      - description: ゲーム名・カナ
+        in: query
+        name: q
+        type: string
+      - description: 機種コード
+        in: query
+        name: machineCode
+        type: string
+      - description: ジャンルコード
+        in: query
+        name: genreCode
+        type: string
+      - description: メーカーコード
+        in: query
+        name: manufacturerCode
+        type: string
+      - description: キーワードコード
+        in: query
+        name: keywordCode
+        type: string
+      - description: 並び順
+        in: query
+        name: sort
+        type: string
+      - default: 1
+        description: ページ番号
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 表示件数
+        in: query
+        name: limit
+        type: integer
+      - description: 匿名訪問者ID
+        in: query
+        name: visitorId
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/app.PaginatedGameResponse'
+      summary: ゲーム検索
+      tags:
+      - Public Games
+  /app/games/{code}:
+    get:
+      parameters:
+      - description: ゲームコード
+        in: path
+        name: code
+        required: true
+        type: string
+      - description: 匿名訪問者ID
+        in: query
+        name: visitorId
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Game'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: ゲーム詳細取得
+      tags:
+      - Public Games
+  /app/games/{code}/favorite:
+    get:
+      parameters:
+      - description: ゲームコード
+        in: path
+        name: code
+        required: true
+        type: string
+      - description: 匿名訪問者ID
+        in: query
+        name: visitorId
+        type: string
+      - description: 匿名訪問者ID
+        in: header
+        name: X-Visitor-Id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/app.GameFavoriteResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: 本日の「推し」状態取得
+      tags:
+      - Public Favorites
+    post:
+      consumes:
+      - application/json
+      description: 同じ訪問者・ゲームの組み合わせは日本時間で1日1回だけ登録します。
+      parameters:
+      - description: ゲームコード
+        in: path
+        name: code
+        required: true
+        type: string
+      - description: 匿名訪問者ID
+        in: header
+        name: X-Visitor-Id
+        type: string
+      - description: 匿名訪問者ID
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/app.GameFavoriteRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/app.GameFavoriteResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: 本日の「推し」を登録
+      tags:
+      - Public Favorites
+  /app/keywords:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/app.KeywordItem'
+            type: array
+      summary: キーワード一覧取得
+      tags:
+      - Public Games
+  /app/page-views:
+    post:
+      consumes:
+      - application/json
+      description: 同じ訪問者による同じページの閲覧は、日本時間で1日1回だけPVとして記録します。
+      parameters:
+      - description: ページ閲覧情報
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/app.PageViewRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: ページ閲覧を日次記録
+      tags:
+      - Analytics
+  /app/rankings:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Game'
+            type: array
+      summary: 公開中ランキング取得
+      tags:
+      - Public Rankings
+  /app/rankings/page:
+    get:
+      parameters:
+      - description: ランキング種別
+        in: query
+        name: type
+        type: string
+      - description: 集計期間
+        in: query
+        name: period
+        type: string
+      - default: 1
+        description: ページ番号
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 表示件数
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/app.PublicRankingResponse'
+      summary: 集計ランキング取得
+      tags:
+      - Public Rankings
+  /app/site-stats:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/app.SiteStats'
+      summary: 公開サイト統計取得
+      tags:
+      - Public Games
+  /app/sitemap:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/app.SitemapData'
+      summary: サイトマップ用データ取得
+      tags:
+      - Public Site
+  /app/top:
+    get:
+      parameters:
+      - default: 5
+        description: 発売日枠の件数
+        in: query
+        name: releaseLimit
+        type: integer
+      - default: 8
+        description: 新着枠の件数
+        in: query
+        name: recentLimit
+        type: integer
+      - default: 8
+        description: ランダム・お気に入り枠の件数
+        in: query
+        name: randomLimit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/app.TopContents'
+      summary: TOP画面コンテンツ取得
+      tags:
+      - Public Games
 securityDefinitions:
   BearerAuth:
     description: '"Bearer {token}" の形式でJWTトークンを入力してください。'

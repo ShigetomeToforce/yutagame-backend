@@ -23,6 +23,15 @@ func NewContactHandler(contactUseCase *usecaseApp.ContactPublicUseCase) *Contact
 	return &ContactHandler{contactUseCase: contactUseCase}
 }
 
+// Create godoc
+// @Summary お問い合わせ送信
+// @Tags Public Contacts
+// @Accept json
+// @Produce json
+// @Param request body ContactRequest true "お問い合わせ内容"
+// @Success 201 {object} model.ContactInquiry
+// @Failure 400 {object} handler.ErrorResponse
+// @Router /app/contacts [post]
 func (h *ContactHandler) Create(c echo.Context) error {
 	var req ContactRequest
 	if err := c.Bind(&req); err != nil {

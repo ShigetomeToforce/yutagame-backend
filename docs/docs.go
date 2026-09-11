@@ -1764,6 +1764,760 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/app/announcements": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Announcements"
+                ],
+                "summary": "公開中のお知らせ一覧取得",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Announcement"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/app/announcements/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Announcements"
+                ],
+                "summary": "公開中のお知らせ詳細取得",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "お知らせID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "匿名訪問者ID",
+                        "name": "visitorId",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Announcement"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/app/banners/{id}/click": {
+            "post": {
+                "tags": [
+                    "Public Banners"
+                ],
+                "summary": "バナークリック記録",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "バナーID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/app/banners/{placement}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Banners"
+                ],
+                "summary": "表示位置別バナー取得",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "表示位置",
+                        "name": "placement",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "匿名訪問者ID",
+                        "name": "visitorId",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Banner"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/app/catalog/genres": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Games"
+                ],
+                "summary": "ジャンルカタログ取得",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/app.CatalogItem"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/app/catalog/machines": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Games"
+                ],
+                "summary": "機種カタログ取得",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/app.CatalogItem"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/app/catalog/manufacturers": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Games"
+                ],
+                "summary": "メーカーカタログ取得",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/app.CatalogItem"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/app/contacts": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Contacts"
+                ],
+                "summary": "お問い合わせ送信",
+                "parameters": [
+                    {
+                        "description": "お問い合わせ内容",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/app.ContactRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.ContactInquiry"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/app/features": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Features"
+                ],
+                "summary": "公開中の特集一覧取得",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Feature"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/app/features/{code}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Features"
+                ],
+                "summary": "公開中の特集詳細取得",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "特集コード",
+                        "name": "code",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "匿名訪問者ID",
+                        "name": "visitorId",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Feature"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/app/game-recommendations": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Recommendations"
+                ],
+                "summary": "ゲーム推薦を送信",
+                "parameters": [
+                    {
+                        "description": "推薦内容",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/app.GameRecommendationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.GameRecommendation"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/app/games": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Games"
+                ],
+                "summary": "ゲーム検索",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ゲーム名・カナ",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "機種コード",
+                        "name": "machineCode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ジャンルコード",
+                        "name": "genreCode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "メーカーコード",
+                        "name": "manufacturerCode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "キーワードコード",
+                        "name": "keywordCode",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "並び順",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "ページ番号",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "表示件数",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "匿名訪問者ID",
+                        "name": "visitorId",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/app.PaginatedGameResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/app/games/{code}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Games"
+                ],
+                "summary": "ゲーム詳細取得",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ゲームコード",
+                        "name": "code",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "匿名訪問者ID",
+                        "name": "visitorId",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Game"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/app/games/{code}/favorite": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Favorites"
+                ],
+                "summary": "本日の「推し」状態取得",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ゲームコード",
+                        "name": "code",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "匿名訪問者ID",
+                        "name": "visitorId",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "匿名訪問者ID",
+                        "name": "X-Visitor-Id",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/app.GameFavoriteResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "同じ訪問者・ゲームの組み合わせは日本時間で1日1回だけ登録します。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Favorites"
+                ],
+                "summary": "本日の「推し」を登録",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ゲームコード",
+                        "name": "code",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "匿名訪問者ID",
+                        "name": "X-Visitor-Id",
+                        "in": "header"
+                    },
+                    {
+                        "description": "匿名訪問者ID",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/app.GameFavoriteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/app.GameFavoriteResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/app/keywords": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Games"
+                ],
+                "summary": "キーワード一覧取得",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/app.KeywordItem"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/app/page-views": {
+            "post": {
+                "description": "同じ訪問者による同じページの閲覧は、日本時間で1日1回だけPVとして記録します。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analytics"
+                ],
+                "summary": "ページ閲覧を日次記録",
+                "parameters": [
+                    {
+                        "description": "ページ閲覧情報",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/app.PageViewRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/app/rankings": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Rankings"
+                ],
+                "summary": "公開中ランキング取得",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Game"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/app/rankings/page": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Rankings"
+                ],
+                "summary": "集計ランキング取得",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ランキング種別",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "集計期間",
+                        "name": "period",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "ページ番号",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "表示件数",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/app.PublicRankingResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/app/site-stats": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Games"
+                ],
+                "summary": "公開サイト統計取得",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/app.SiteStats"
+                        }
+                    }
+                }
+            }
+        },
+        "/app/sitemap": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Site"
+                ],
+                "summary": "サイトマップ用データ取得",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/app.SitemapData"
+                        }
+                    }
+                }
+            }
+        },
+        "/app/top": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public Games"
+                ],
+                "summary": "TOP画面コンテンツ取得",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 5,
+                        "description": "発売日枠の件数",
+                        "name": "releaseLimit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 8,
+                        "description": "新着枠の件数",
+                        "name": "recentLimit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 8,
+                        "description": "ランダム・お気に入り枠の件数",
+                        "name": "randomLimit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/app.TopContents"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -1965,6 +2719,228 @@ const docTemplate = `{
                 }
             }
         },
+        "app.CatalogItem": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "gameCount": {
+                    "type": "integer"
+                },
+                "imageKey": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "app.ContactRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "subject": {
+                    "type": "string"
+                }
+            }
+        },
+        "app.FavoriteRankingItem": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "game": {
+                    "$ref": "#/definitions/model.Game"
+                }
+            }
+        },
+        "app.GameFavoriteRequest": {
+            "type": "object",
+            "properties": {
+                "visitorId": {
+                    "type": "string"
+                }
+            }
+        },
+        "app.GameFavoriteResult": {
+            "type": "object",
+            "properties": {
+                "alreadyVoted": {
+                    "type": "boolean"
+                },
+                "count": {
+                    "type": "integer"
+                },
+                "favoriteDate": {
+                    "type": "string"
+                },
+                "gameId": {
+                    "type": "integer"
+                }
+            }
+        },
+        "app.GameRecommendationRequest": {
+            "type": "object",
+            "properties": {
+                "gameName": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "app.KeywordItem": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "gameCount": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "app.PageViewRequest": {
+            "type": "object",
+            "properties": {
+                "pagePath": {
+                    "type": "string"
+                },
+                "visitorId": {
+                    "type": "string"
+                }
+            }
+        },
+        "app.PaginatedGameResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "limit": {
+                    "type": "integer"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "totalCount": {
+                    "type": "integer"
+                },
+                "totalPages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "app.PublicRankingResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Game"
+                    }
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "totalCount": {
+                    "type": "integer"
+                },
+                "totalPages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "app.SiteStats": {
+            "type": "object",
+            "properties": {
+                "gameCount": {
+                    "type": "integer"
+                },
+                "totalListPrice": {
+                    "type": "integer"
+                }
+            }
+        },
+        "app.SitemapData": {
+            "type": "object",
+            "properties": {
+                "announcementIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "featureCodes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "gameCodes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "app.TopContents": {
+            "type": "object",
+            "properties": {
+                "favoriteRanking": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/app.FavoriteRankingItem"
+                    }
+                },
+                "randomPicks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Game"
+                    }
+                },
+                "rankingTop20": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Game"
+                    }
+                },
+                "recentlyReleased": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Game"
+                    }
+                },
+                "recentlyUpdated": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Game"
+                    }
+                },
+                "releaseToday": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Game"
+                    }
+                }
+            }
+        },
         "handler.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -2122,9 +3098,218 @@ const docTemplate = `{
                 }
             }
         },
+        "model.Announcement": {
+            "type": "object",
+            "properties": {
+                "accessCount": {
+                    "type": "integer"
+                },
+                "bodyHtml": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "displayOrder": {
+                    "description": "DisplayOrder は公開中のお知らせ同士の表示優先度（1以上が手動指定、0は未指定）",
+                    "type": "integer"
+                },
+                "excerpt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "publishEndAt": {
+                    "type": "string"
+                },
+                "publishStartAt": {
+                    "type": "string"
+                },
+                "publishedAt": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Banner": {
+            "type": "object",
+            "properties": {
+                "accessCount": {
+                    "type": "integer"
+                },
+                "clickCount": {
+                    "type": "integer"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "displayOrder": {
+                    "type": "integer"
+                },
+                "endsAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "imageKey": {
+                    "type": "string"
+                },
+                "linkUrl": {
+                    "type": "string"
+                },
+                "openInNewTab": {
+                    "type": "boolean"
+                },
+                "placement": {
+                    "type": "string"
+                },
+                "startsAt": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.ContactInquiry": {
+            "type": "object",
+            "properties": {
+                "adminNote": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "subject": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Feature": {
+            "type": "object",
+            "properties": {
+                "accessCount": {
+                    "type": "integer"
+                },
+                "bodyHtml": {
+                    "type": "string"
+                },
+                "code": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "displayOrder": {
+                    "type": "integer"
+                },
+                "excerpt": {
+                    "type": "string"
+                },
+                "featureGames": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.FeatureGame"
+                    }
+                },
+                "games": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Game"
+                    }
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "publishEndAt": {
+                    "type": "string"
+                },
+                "publishStartAt": {
+                    "type": "string"
+                },
+                "publishedAt": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "thumbnailImageKey": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.FeatureGame": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "displayOrder": {
+                    "type": "integer"
+                },
+                "featureId": {
+                    "type": "integer"
+                },
+                "game": {
+                    "$ref": "#/definitions/model.Game"
+                },
+                "gameId": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
         "model.Game": {
             "type": "object",
             "properties": {
+                "affiliates": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.GameAffiliate"
+                    }
+                },
                 "catchCopy": {
                     "type": "string"
                 },
@@ -2194,6 +3379,15 @@ const docTemplate = `{
                 "overview": {
                     "type": "string"
                 },
+                "previousRank": {
+                    "type": "integer"
+                },
+                "rank": {
+                    "type": "integer"
+                },
+                "rankingCount": {
+                    "type": "integer"
+                },
                 "releaseDate": {
                     "type": "string"
                 },
@@ -2207,6 +3401,55 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "youtubeUrl": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.GameAffiliate": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "gameId": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.GameRecommendation": {
+            "type": "object",
+            "properties": {
+                "adminNote": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "gameName": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updatedAt": {
                     "type": "string"
                 }
             }

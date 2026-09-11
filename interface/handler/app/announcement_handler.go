@@ -18,6 +18,12 @@ func NewAnnouncementHandler(announcementUseCase *usecaseApp.AnnouncementPublicUs
 	return &AnnouncementHandler{announcementUseCase: announcementUseCase, analyticsLogUseCase: analyticsLogUseCase}
 }
 
+// GetAll godoc
+// @Summary 公開中のお知らせ一覧取得
+// @Tags Public Announcements
+// @Produce json
+// @Success 200 {array} model.Announcement
+// @Router /app/announcements [get]
 func (h *AnnouncementHandler) GetAll(c echo.Context) error {
 	ctx := c.Request().Context()
 	items, err := h.announcementUseCase.GetPublishedAnnouncements(ctx)
@@ -27,6 +33,15 @@ func (h *AnnouncementHandler) GetAll(c echo.Context) error {
 	return c.JSON(http.StatusOK, items)
 }
 
+// GetByID godoc
+// @Summary 公開中のお知らせ詳細取得
+// @Tags Public Announcements
+// @Produce json
+// @Param id path int true "お知らせID"
+// @Param visitorId query string false "匿名訪問者ID"
+// @Success 200 {object} model.Announcement
+// @Failure 404 {object} handler.ErrorResponse
+// @Router /app/announcements/{id} [get]
 func (h *AnnouncementHandler) GetByID(c echo.Context) error {
 	id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 	ctx := c.Request().Context()

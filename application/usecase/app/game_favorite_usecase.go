@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"yutagame-backend/application/usecase"
 	"yutagame-backend/domain/model"
 	"yutagame-backend/infrastructure/database"
 )
@@ -47,7 +48,7 @@ func (u *GameFavoriteUseCase) GetStatus(
 		return nil, fmt.Errorf("指定されたゲームが見つかりませんでした")
 	}
 
-	favoriteDate := time.Now().Format("2006-01-02")
+	favoriteDate := time.Now().In(usecase.JapanLocation).Format("2006-01-02")
 
 	count, err := u.favoriteRepo.CountByGameID(ctx, game.ID)
 	if err != nil {
@@ -91,7 +92,7 @@ func (u *GameFavoriteUseCase) PushToday(
 		return nil, fmt.Errorf("指定されたゲームが見つかりませんでした")
 	}
 
-	favoriteDate := time.Now().Format("2006-01-02")
+	favoriteDate := time.Now().In(usecase.JapanLocation).Format("2006-01-02")
 
 	exists, err := u.favoriteRepo.ExistsByGameIDVisitorID(ctx, game.ID, visitorID, favoriteDate)
 	if err != nil {

@@ -19,6 +19,12 @@ func NewFeatureHandler(featureUseCase *usecaseApp.FeaturePublicUseCase, analytic
 	return &FeatureHandler{featureUseCase: featureUseCase, analyticsLogUseCase: analyticsLogUseCase}
 }
 
+// GetAll godoc
+// @Summary 公開中の特集一覧取得
+// @Tags Public Features
+// @Produce json
+// @Success 200 {array} model.Feature
+// @Router /app/features [get]
 func (h *FeatureHandler) GetAll(c echo.Context) error {
 	items, err := h.featureUseCase.GetPublishedFeatures(c.Request().Context())
 	if err != nil {
@@ -30,6 +36,15 @@ func (h *FeatureHandler) GetAll(c echo.Context) error {
 	return c.JSON(http.StatusOK, items)
 }
 
+// GetByCode godoc
+// @Summary 公開中の特集詳細取得
+// @Tags Public Features
+// @Produce json
+// @Param code path string true "特集コード"
+// @Param visitorId query string false "匿名訪問者ID"
+// @Success 200 {object} model.Feature
+// @Failure 404 {object} handler.ErrorResponse
+// @Router /app/features/{code} [get]
 func (h *FeatureHandler) GetByCode(c echo.Context) error {
 	code := strings.TrimSpace(c.Param("code"))
 	if code == "" {

@@ -95,6 +95,32 @@ func (r *ContentAccessLogRepository) AggregateRange(ctx context.Context, from, t
 	return toContentAccessCounts(rows), nil
 }
 
+func (r *ContentAccessLogRepository) AggregateDailyRange(ctx context.Context, from, to time.Time) (map[string]ContentAccessCounts, error) {
+	var rows []struct {
+		Date string
+		ContentAccessCounts
+	}
+	err := r.db.WithContext(ctx).
+		Model(&model.ContentAccessLog{}).
+		Select(`
+			DATE_FORMAT(created_at, '%Y-%m-%d') AS date,
+			SUM(CASE WHEN content_type = 'announcement' THEN 1 ELSE 0 END) AS announcement_views,
+			SUM(CASE WHEN content_type = 'feature' THEN 1 ELSE 0 END) AS feature_views,
+			SUM(CASE WHEN content_type = 'banner' THEN 1 ELSE 0 END) AS banner_views
+		`).
+		Where("created_at >= ? AND created_at < ?", from, to).
+		Group("DATE(created_at)").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string]ContentAccessCounts, len(rows))
+	for _, row := range rows {
+		result[row.Date] = row.ContentAccessCounts
+	}
+	return result, nil
+}
+
 func (r *ContentAccessLogRepository) AggregateAllTime(ctx context.Context) (ContentAccessCounts, error) {
 	var rows []struct {
 		ContentType string

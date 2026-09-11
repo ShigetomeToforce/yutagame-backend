@@ -191,6 +191,7 @@ func (u *GamePublicUseCase) SearchGames(
 	page, limit int,
 	filter GameListFilter,
 ) ([]model.Game, int64, int, error) {
+	// URL由来の空白を最初に除去し、検索条件の有無を以降で一貫して判定します。
 	filter.SearchWord = strings.TrimSpace(filter.SearchWord)
 	filter.MachineCode = strings.TrimSpace(filter.MachineCode)
 	filter.GenreCode = strings.TrimSpace(filter.GenreCode)
@@ -238,6 +239,7 @@ func (u *GamePublicUseCase) SearchGames(
 			}
 
 			if filter.KeywordCode != "" {
+				// 多対多のキーワードはJOINで行が重複しないよう、存在確認だけを行います。
 				db = db.Where(`
 					EXISTS (
 						SELECT 1
@@ -254,6 +256,7 @@ func (u *GamePublicUseCase) SearchGames(
 	}
 
 	order := gameSearchOrder(filter.Sort)
+	// 件数取得と現在ページ取得を共通化し、画面側が必要なページ情報も同時に返します。
 	games, totalCount, totalPages, err := usecase.ExecutePaginatedSearch(
 		ctx,
 		page,
@@ -493,6 +496,7 @@ func (u *GamePublicUseCase) rankedGamesByIDs(ctx context.Context, ids []int64, c
 func (u *GamePublicUseCase) GetTopContents(ctx context.Context, releaseLimit, recentLimit, randomLimit int) (*TopContents, error) {
 	now := time.Now()
 
+	// TOPの各棚は表示目的が異なるため別クエリですが、各Repository側でLIMITを適用します。
 	releaseToday, err := u.gameRepo.FindReleasedOnMonthDay(ctx, int(now.Month()), now.Day(), releaseLimit)
 	if err != nil {
 		return nil, err
@@ -529,9 +533,18 @@ func (u *GamePublicUseCase) GetTopContents(ctx context.Context, releaseLimit, re
 			rankingTop20 = append(rankingTop20, game)
 		}
 	}
-	for _, games := range [][]model.Game{releaseToday, recentlyReleased, recentlyUpdated, randomPicks} {
-		if err := u.applyActiveRanks(ctx, games); err != nil {
+	if u.rankingRepo != nil {
+		// 各棚ごとにランキングを問い合わせず、IDと順位の対応表を1回だけ取得して付与します。
+		ranksByGameID, err := u.rankingRepo.GetActiveRanksByGameID(ctx)
+		if err != nil {
 			return nil, err
+		}
+		for _, games := range [][]model.Game{releaseToday, recentlyReleased, recentlyUpdated, randomPicks} {
+			for index := range games {
+				if rank, ok := ranksByGameID[games[index].ID]; ok {
+					games[index].Rank = &rank
+				}
+			}
 		}
 	}
 
@@ -543,6 +556,7 @@ func (u *GamePublicUseCase) GetTopContents(ctx context.Context, releaseLimit, re
 
 	rankedGames := make([]model.Game, 0, len(rankingRows))
 	if len(rankingRows) > 0 {
+		// 集計結果の順序を守るため、ゲームを一括取得した後にIDで元の順位へ並べ直します。
 		ids := make([]int64, 0, len(rankingRows))
 		for _, row := range rankingRows {
 			ids = append(ids, row.GameID)

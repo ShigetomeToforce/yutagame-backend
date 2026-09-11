@@ -50,6 +50,34 @@ func (r *SearchLogRepository) AggregateRange(ctx context.Context, from, to time.
 	return row, err
 }
 
+func (r *SearchLogRepository) AggregateDailyRange(ctx context.Context, from, to time.Time) (map[string]SearchLogAggregate, error) {
+	var rows []struct {
+		Date string
+		SearchLogAggregate
+	}
+	err := r.db.WithContext(ctx).
+		Model(&model.SearchLog{}).
+		Select(`
+			DATE_FORMAT(created_at, '%Y-%m-%d') AS date,
+			COUNT(*) AS search_count,
+			SUM(CASE WHEN genre_code <> '' THEN 1 ELSE 0 END) AS genre_searches,
+			SUM(CASE WHEN machine_code <> '' THEN 1 ELSE 0 END) AS machine_searches,
+			SUM(CASE WHEN manufacturer_code <> '' THEN 1 ELSE 0 END) AS maker_searches,
+			SUM(CASE WHEN keyword_code <> '' THEN 1 ELSE 0 END) AS keyword_searches
+		`).
+		Where("created_at >= ? AND created_at < ?", from, to).
+		Group("DATE(created_at)").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string]SearchLogAggregate, len(rows))
+	for _, row := range rows {
+		result[row.Date] = row.SearchLogAggregate
+	}
+	return result, nil
+}
+
 func searchTopColumn(field string) (string, bool) {
 	column, ok := map[string]string{
 		"machineCode":      "machine_code",

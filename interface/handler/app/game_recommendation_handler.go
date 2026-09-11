@@ -22,6 +22,16 @@ type GameRecommendationHandler struct {
 func NewGameRecommendationHandler(useCase *usecaseAdmin.GameRecommendationUseCase, notifier mail.GameRecommendationNotifier) *GameRecommendationHandler {
 	return &GameRecommendationHandler{useCase: useCase, notifier: notifier}
 }
+
+// Create godoc
+// @Summary ゲーム推薦を送信
+// @Tags Public Recommendations
+// @Accept json
+// @Produce json
+// @Param request body GameRecommendationRequest true "推薦内容"
+// @Success 201 {object} model.GameRecommendation
+// @Failure 400 {object} handler.ErrorResponse
+// @Router /app/game-recommendations [post]
 func (h *GameRecommendationHandler) Create(c echo.Context) error {
 	var req GameRecommendationRequest
 	if err := c.Bind(&req); err != nil {

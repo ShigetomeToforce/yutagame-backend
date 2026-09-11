@@ -47,6 +47,7 @@ func runLegacyAutoMigrate(db *gorm.DB) error {
 		&model.GameFavorite{},
 		&model.SearchLog{},
 		&model.GameViewLog{},
+		&model.PageViewLog{},
 		&model.ContentAccessLog{},
 		&model.Banner{},
 		&model.PurchaseCandidate{},
@@ -126,6 +127,7 @@ func main() {
 	recommendationRepo := database.NewGameRecommendationRepository(db)
 	searchLogRepo := database.NewSearchLogRepository(db)
 	gameViewLogRepo := database.NewGameViewLogRepository(db)
+	pageViewLogRepo := database.NewPageViewLogRepository(db)
 	contentAccessLogRepo := database.NewContentAccessLogRepository(db)
 	favoriteRepo := database.NewGameFavoriteRepository(db)
 	rankingRepo := database.NewGameRankingRepository(db)
@@ -147,6 +149,7 @@ func main() {
 	accessLogUseCase := usecaseAdmin.NewAccessLogUseCase(
 		searchLogRepo,
 		gameViewLogRepo,
+		pageViewLogRepo,
 		contactRepo,
 		machineRepo,
 		manufacturerRepo,
@@ -158,7 +161,7 @@ func main() {
 	rankingUseCase := usecaseAdmin.NewGameRankingUseCase(gameRepo, rankingRepo)
 	bannerUseCase := usecaseAdmin.NewBannerUseCase(bannerRepo, contentAccessLogRepo)
 	purchaseCandidateUseCase := usecaseAdmin.NewPurchaseCandidateUseCase(purchaseCandidateRepo)
-	analyticsLogUseCase := usecaseApp.NewAnalyticsLogUseCase(searchLogRepo, gameViewLogRepo, contentAccessLogRepo)
+	analyticsLogUseCase := usecaseApp.NewAnalyticsLogUseCase(searchLogRepo, gameViewLogRepo, contentAccessLogRepo, pageViewLogRepo)
 	contactNotifier := mail.NewSMTPContactNotifierFromEnv()
 	favoriteUseCase := usecaseApp.NewGameFavoriteUseCase(gameRepo, favoriteRepo)
 	publicGameUseCase := usecaseApp.NewGamePublicUseCase(
@@ -225,6 +228,7 @@ func main() {
 		// 🌐 【公開エリア】一般公開向けの参照系API
 		public := api.Group("/app")
 		{
+			public.POST("/page-views", publicGameHandler.RecordPageView)
 			public.GET("/site-stats", publicGameHandler.GetSiteStats)
 			public.GET("/top", publicGameHandler.GetTop)
 			public.GET("/announcements", publicAnnouncementHandler.GetAll)

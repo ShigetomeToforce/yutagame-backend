@@ -3,10 +3,9 @@ package database
 import (
 	"context"
 	"errors"
-	"math/rand"
+	"fmt"
 	"sort"
 	"strings"
-	"time"
 	"yutagame-backend/domain/model"
 
 	"gorm.io/gorm"
@@ -193,86 +192,27 @@ func (r *GameRepository) GetStats(ctx context.Context) (GameStats, error) {
 	return stats, err
 }
 
-// FindReleasedOnMonthDay 指定日を起点に、同月日のゲームを優先しつつ、
-// 足りない分は翌日以降の近い発売日順で補完して取得する
+// FindReleasedOnMonthDay は同月日の作品を優先し、足りない分を次に近い月日から補います。
+// 並べ替えと件数制限をDBで行うため、ゲーム数が増えても全件をメモリへ読み込みません。
 func (r *GameRepository) FindReleasedOnMonthDay(ctx context.Context, month, day, limit int) ([]model.Game, error) {
 	if limit < 1 {
 		return []model.Game{}, nil
 	}
 
 	var games []model.Game
+	targetMonthDay := fmt.Sprintf("%02d%02d", month, day)
 	err := r.db.WithContext(ctx).
 		Preload("Manufacturer").
 		Preload("Machine").
 		Preload("Genre").
 		Preload("Keywords").
 		Preload("Affiliates").
-		Order("release_date asc, id asc").
+		Order(fmt.Sprintf("CASE WHEN DATE_FORMAT(release_date, '%%m%%d') >= '%s' THEN 0 ELSE 1 END", targetMonthDay)).
+		Order("DATE_FORMAT(release_date, '%m%d') ASC").
+		Order("release_date DESC, id DESC").
+		Limit(limit).
 		Find(&games).Error
-	if err != nil {
-		return nil, err
-	}
-
-	const calendarYear = 2000
-	target := time.Date(calendarYear, time.Month(month), day, 0, 0, 0, 0, time.UTC)
-	base := time.Date(calendarYear, time.January, 1, 0, 0, 0, 0, time.UTC)
-	daysInYear := int(time.Date(calendarYear+1, time.January, 1, 0, 0, 0, 0, time.UTC).Sub(base).Hours() / 24)
-
-	groupMap := map[int][]model.Game{}
-	for _, game := range games {
-		gameDate := time.Date(calendarYear, game.ReleaseDate.Month(), game.ReleaseDate.Day(), 0, 0, 0, 0, time.UTC)
-		distance := int(gameDate.Sub(target).Hours() / 24)
-		if distance < 0 {
-			distance += daysInYear
-		}
-		groupMap[distance] = append(groupMap[distance], game)
-	}
-
-	distances := make([]int, 0, len(groupMap))
-	for distance := range groupMap {
-		distances = append(distances, distance)
-	}
-	sort.Ints(distances)
-
-	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	result := make([]model.Game, 0, limit)
-	for _, distance := range distances {
-		group := groupMap[distance]
-		if distance == 0 {
-			rng.Shuffle(len(group), func(i, j int) {
-				group[i], group[j] = group[j], group[i]
-			})
-		} else {
-			sort.Slice(group, func(i, j int) bool {
-				if group[i].ReleaseDate.Equal(group[j].ReleaseDate) {
-					return group[i].ID > group[j].ID
-				}
-				return group[i].ReleaseDate.After(group[j].ReleaseDate)
-			})
-		}
-
-		if distance == 0 {
-			result = append(result, group...)
-			if len(result) >= limit {
-				return result, nil
-			}
-			continue
-		}
-
-		remaining := limit - len(result)
-		if remaining <= 0 {
-			break
-		}
-		if len(group) > remaining {
-			group = group[:remaining]
-		}
-		result = append(result, group...)
-		if len(result) >= limit {
-			break
-		}
-	}
-
-	return result, nil
+	return games, err
 }
 
 // FindRecentlyReleased 発売日が新しいゲームを取得する

@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"strings"
 	"time"
+	"yutagame-backend/application/usecase"
 	"yutagame-backend/domain/model"
 	"yutagame-backend/infrastructure/database"
 )
@@ -33,22 +34,74 @@ type ContentAccessLogInput struct {
 	ContentKey  string
 }
 
+type PageViewLogInput struct {
+	VisitorID string
+	IP        string
+	PagePath  string
+}
+
 type AnalyticsLogUseCase struct {
 	searchLogRepo        *database.SearchLogRepository
 	gameViewLogRepo      *database.GameViewLogRepository
 	contentAccessLogRepo *database.ContentAccessLogRepository
+	pageViewLogRepo      *database.PageViewLogRepository
 }
 
 func NewAnalyticsLogUseCase(
 	searchLogRepo *database.SearchLogRepository,
 	gameViewLogRepo *database.GameViewLogRepository,
 	contentAccessLogRepo *database.ContentAccessLogRepository,
+	pageViewLogRepo *database.PageViewLogRepository,
 ) *AnalyticsLogUseCase {
 	return &AnalyticsLogUseCase{
 		searchLogRepo:        searchLogRepo,
 		gameViewLogRepo:      gameViewLogRepo,
 		contentAccessLogRepo: contentAccessLogRepo,
+		pageViewLogRepo:      pageViewLogRepo,
 	}
+}
+
+func visitorHash(visitorID, ip string) string {
+	identity := strings.TrimSpace(visitorID)
+	if identity == "" {
+		identity = "ip:" + strings.TrimSpace(ip)
+	}
+	if identity == "" || identity == "ip:" {
+		return ""
+	}
+	h := sha256.Sum256([]byte(identity))
+	return hex.EncodeToString(h[:])
+}
+
+func normalizePagePath(pagePath string) string {
+	pagePath = strings.TrimSpace(pagePath)
+	if pagePath == "" || !strings.HasPrefix(pagePath, "/") {
+		return ""
+	}
+	runes := []rune(pagePath)
+	if len(runes) > 191 {
+		return string(runes[:191])
+	}
+	return pagePath
+}
+
+func (u *AnalyticsLogUseCase) RecordPageView(ctx context.Context, input PageViewLogInput) error {
+	if u.pageViewLogRepo == nil {
+		return nil
+	}
+	identity := visitorHash(input.VisitorID, input.IP)
+	pagePath := normalizePagePath(input.PagePath)
+	if identity == "" || pagePath == "" {
+		return nil
+	}
+
+	// サーバーのOS設定に依存せず、日本の日付境界で日次集計します。
+	now := time.Now().In(usecase.JapanLocation)
+	return u.pageViewLogRepo.CreateDaily(ctx, &model.PageViewLog{
+		VisitorHash: identity,
+		PagePath:    pagePath,
+		ViewedOn:    now.Format("2006-01-02"),
+	})
 }
 
 func hashIP(ip string) string {
@@ -90,7 +143,7 @@ func (u *AnalyticsLogUseCase) RecordGameView(ctx context.Context, input GameView
 		item.VisitorID,
 		item.IPHash,
 		item.GameCode,
-		time.Now(),
+		time.Now().In(usecase.JapanLocation),
 	)
 	if err != nil {
 		return err
@@ -115,7 +168,7 @@ func (u *AnalyticsLogUseCase) RecordContentAccess(ctx context.Context, input Con
 	if item.ContentType == "" || item.ContentKey == "" {
 		return nil
 	}
-	exists, err := u.contentAccessLogRepo.ExistsDailyAccess(ctx, item.ContentType, item.ContentKey, item.VisitorID, item.IPHash, time.Now())
+	exists, err := u.contentAccessLogRepo.ExistsDailyAccess(ctx, item.ContentType, item.ContentKey, item.VisitorID, item.IPHash, time.Now().In(usecase.JapanLocation))
 	if err != nil {
 		return err
 	}

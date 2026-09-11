@@ -164,6 +164,9 @@ UseCaseで create / update / skip を判定し、UIがそのまま表示でき�
 - UseCaseに業務判断を寄せ、Handlerを薄く保つ
 - Saveで副作用が出る場合は UpdateFieldsByID を使う
 - JSONのnullアクセスでフロントが落ちないよう、空配列初期化を徹底する
+- コメントはコードの逐語訳ではなく、JST境界、重複防止、互換性など「なぜその実装か」を説明する
+- 一覧APIでは全件取得後のGo側絞り込みを避け、WHERE・ORDER・LIMITをDBへ任せる
+- 複数日の集計は日数分ループせず、GROUP BYで一括取得する
 
 ## 9. 日常コマンド
 
@@ -172,7 +175,47 @@ UseCaseで create / update / skip を判定し、UIがそのまま表示でき�
 - docker compose up -d --build
 - docker compose restart backend
 
-## 10. 拡張方針
+Swagger更新:
+
+```bash
+go run github.com/swaggo/swag/cmd/swag@v1.16.4 init -g main.go --output docs
+```
+
+## 10. テスト方針
+
+`*_test.go`
+は対象コードと同じpackage付近に置き、まず外部DBなしで再現できる業務ルールを高速に検証する。
+
+現在の主な単体テスト:
+
+- ページングの境界値と不正limit
+- PV訪問者識別、パス正規化、UTF-8切り詰め
+- アクセス分析の日次・月次範囲とJST
+- お知らせ公開日時のJST解釈
+- 公開ゲーム検索のsortとpage/limit補正
+
+今後の優先順位:
+
+1. MySQLを使ったRepository統合テスト（検索条件、日次重複、一括集計）
+2. UseCaseのRepositoryをinterface化し、問い合わせ・お気に入り・ランキングをmockテスト
+3. Echo HandlerのHTTPステータスとJSON契約テスト
+
+外部依存を伴うテストを増やす際も、通常の `go test ./...`
+で実行できる単体テストと分離する。
+
+## 11. アクセス集計
+
+サイト全体のPV/UUは `page_view_logs` を正とする。
+
+- `routes/_middleware.ts` が公開HTMLページの成功したGETを記録する
+- `PageViewLogRepository.CreateDaily` がDB一意制約を利用して二重登録を無視する
+- 日付はコンテナのローカル設定ではなく `Asia/Tokyo` を明示する
+- 日次表はrepositoryで日付GROUP BYし、日数分のクエリを発行しない
+
+`game_view_logs`
+はゲーム詳細の人気ランキング専用であり、サイト全体PVには使わない。
+
+## 12. 拡張方針
 
 - CSV列定義の共通テーブル化
 - apply処理のトランザクション境界強化

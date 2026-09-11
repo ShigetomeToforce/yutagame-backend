@@ -49,6 +49,11 @@ func ExecutePaginatedSearch[T any](
 
 // CalculatePagination 総件数、要求ページ、リミットから、各種ページングパラメータを安全に計算する汎用関数
 func CalculatePagination(totalCount int64, page, limit int) PaginationParam {
+	// Handlerを経由しない呼び出しでもゼロ除算にならないよう、最低1件へ補正します。
+	if limit < 1 {
+		limit = 1
+	}
+
 	// 1. 総ページ数の計算（切り上げ）
 	totalPages := int(math.Ceil(float64(totalCount) / float64(limit)))
 	if totalPages < 1 {

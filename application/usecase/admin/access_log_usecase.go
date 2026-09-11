@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"time"
+	"yutagame-backend/application/usecase"
 	"yutagame-backend/infrastructure/database"
 )
 
@@ -75,6 +76,7 @@ type AccessLogMonthlyTable struct {
 type AccessLogUseCase struct {
 	searchLogRepo        *database.SearchLogRepository
 	gameViewLogRepo      *database.GameViewLogRepository
+	pageViewLogRepo      *database.PageViewLogRepository
 	contactRepo          *database.ContactInquiryRepository
 	machineRepo          *database.MachineRepository
 	manufacturerRepo     *database.ManufacturerRepository
@@ -87,6 +89,7 @@ type AccessLogUseCase struct {
 func NewAccessLogUseCase(
 	searchLogRepo *database.SearchLogRepository,
 	gameViewLogRepo *database.GameViewLogRepository,
+	pageViewLogRepo *database.PageViewLogRepository,
 	contactRepo *database.ContactInquiryRepository,
 	machineRepo *database.MachineRepository,
 	manufacturerRepo *database.ManufacturerRepository,
@@ -98,6 +101,7 @@ func NewAccessLogUseCase(
 	return &AccessLogUseCase{
 		searchLogRepo:        searchLogRepo,
 		gameViewLogRepo:      gameViewLogRepo,
+		pageViewLogRepo:      pageViewLogRepo,
 		contactRepo:          contactRepo,
 		machineRepo:          machineRepo,
 		manufacturerRepo:     manufacturerRepo,
@@ -113,7 +117,7 @@ func parseDateStart(value string) (time.Time, bool) {
 	if value == "" {
 		return time.Time{}, false
 	}
-	t, err := time.ParseInLocation("2006-01-02", value, time.Local)
+	t, err := time.ParseInLocation("2006-01-02", value, usecase.JapanLocation)
 	if err != nil {
 		return time.Time{}, false
 	}
@@ -125,7 +129,7 @@ func parseMonthStart(value string) (time.Time, bool) {
 	if value == "" {
 		return time.Time{}, false
 	}
-	t, err := time.ParseInLocation("2006-01", value, time.Local)
+	t, err := time.ParseInLocation("2006-01", value, usecase.JapanLocation)
 	if err != nil {
 		return time.Time{}, false
 	}
@@ -137,7 +141,7 @@ func (u *AccessLogUseCase) buildBucket(ctx context.Context, from, to time.Time) 
 	if err != nil {
 		return AccessLogKPIBucket{}, err
 	}
-	viewAgg, err := u.gameViewLogRepo.AggregateRange(ctx, from, to)
+	viewAgg, err := u.pageViewLogRepo.AggregateRange(ctx, from, to)
 	if err != nil {
 		return AccessLogKPIBucket{}, err
 	}
@@ -197,7 +201,7 @@ func (u *AccessLogUseCase) buildBucket(ctx context.Context, from, to time.Time) 
 }
 
 func (u *AccessLogUseCase) GetDashboard(ctx context.Context) (*AccessLogDashboard, error) {
-	now := time.Now()
+	now := time.Now().In(usecase.JapanLocation)
 	dailyStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	dailyEnd := dailyStart.AddDate(0, 0, 1)
 
@@ -227,7 +231,7 @@ func normalizeBreakdownField(field string) string {
 
 func resolvePeriodRange(period, date, month string) (time.Time, time.Time, string) {
 	period = normalizePeriod(period)
-	now := time.Now()
+	now := time.Now().In(usecase.JapanLocation)
 
 	if period == "total" {
 		return time.Time{}, time.Time{}, "累計"
@@ -445,7 +449,7 @@ func (u *AccessLogUseCase) GetSearchBreakdown(
 
 	targetDate, ok := parseDateStart(date)
 	if !ok {
-		now := time.Now()
+		now := time.Now().In(usecase.JapanLocation)
 		targetDate = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	}
 
@@ -475,34 +479,40 @@ func (u *AccessLogUseCase) GetMonthlyTable(
 ) (*AccessLogMonthlyTable, error) {
 	monthStart, ok := parseMonthStart(month)
 	if !ok {
-		now := time.Now()
+		now := time.Now().In(usecase.JapanLocation)
 		monthStart = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	}
 
 	monthEnd := monthStart.AddDate(0, 1, 0)
+	// 日ごとにSQLを発行せず、各ログテーブルを月単位でGROUP BYしてまとめて取得します。
+	searchByDate, err := u.searchLogRepo.AggregateDailyRange(ctx, monthStart, monthEnd)
+	if err != nil {
+		return nil, err
+	}
+	viewsByDate, err := u.pageViewLogRepo.AggregateDailyRange(ctx, monthStart, monthEnd)
+	if err != nil {
+		return nil, err
+	}
+	contactsByDate, err := u.contactRepo.CountDailyRange(ctx, monthStart, monthEnd)
+	if err != nil {
+		return nil, err
+	}
+	contentByDate, err := u.contentAccessLogRepo.AggregateDailyRange(ctx, monthStart, monthEnd)
+	if err != nil {
+		return nil, err
+	}
 
 	rows := make([]AccessLogMonthlyRow, 0, 31)
+	// ログがない日も管理画面に表示できるよう、月の日付を基準にゼロ値を埋めます。
 	for day := monthStart; day.Before(monthEnd); day = day.AddDate(0, 0, 1) {
-		dayEnd := day.AddDate(0, 0, 1)
-		searchAgg, err := u.searchLogRepo.AggregateRange(ctx, day, dayEnd)
-		if err != nil {
-			return nil, err
-		}
-		viewAgg, err := u.gameViewLogRepo.AggregateRange(ctx, day, dayEnd)
-		if err != nil {
-			return nil, err
-		}
-		contactCount, err := u.contactRepo.CountRange(ctx, day, dayEnd)
-		if err != nil {
-			return nil, err
-		}
-		contentCounts, err := u.contentAccessLogRepo.AggregateRange(ctx, day, dayEnd)
-		if err != nil {
-			return nil, err
-		}
+		date := day.Format("2006-01-02")
+		searchAgg := searchByDate[date]
+		viewAgg := viewsByDate[date]
+		contactCount := contactsByDate[date]
+		contentCounts := contentByDate[date]
 
 		rows = append(rows, AccessLogMonthlyRow{
-			Date:              day.Format("2006-01-02"),
+			Date:              date,
 			PageViews:         viewAgg.PageViews,
 			UniqueVisitors:    viewAgg.UniqueVisitors,
 			SearchCount:       searchAgg.SearchCount,
@@ -517,21 +527,24 @@ func (u *AccessLogUseCase) GetMonthlyTable(
 		})
 	}
 
-	totalSearchAgg, err := u.searchLogRepo.AggregateRange(ctx, monthStart, monthEnd)
+	totalViewAgg, err := u.pageViewLogRepo.AggregateRange(ctx, monthStart, monthEnd)
 	if err != nil {
 		return nil, err
 	}
-	totalViewAgg, err := u.gameViewLogRepo.AggregateRangeWithMonthlyUniquePVUU(ctx, monthStart, monthEnd)
-	if err != nil {
-		return nil, err
-	}
-	totalContactCount, err := u.contactRepo.CountRange(ctx, monthStart, monthEnd)
-	if err != nil {
-		return nil, err
-	}
-	totalContentCounts, err := u.contentAccessLogRepo.AggregateRange(ctx, monthStart, monthEnd)
-	if err != nil {
-		return nil, err
+	var totalSearchAgg database.SearchLogAggregate
+	var totalContactCount int64
+	var totalContentCounts database.ContentAccessCounts
+	for _, row := range rows {
+		// 検索数などは日別値の合計でよい一方、月次UUは日次UUの合計にできないため上で再集計します。
+		totalSearchAgg.SearchCount += row.SearchCount
+		totalSearchAgg.MachineSearches += row.MachineSearches
+		totalSearchAgg.MakerSearches += row.MakerSearches
+		totalSearchAgg.GenreSearches += row.GenreSearches
+		totalSearchAgg.KeywordSearches += row.KeywordSearches
+		totalContactCount += row.ContactCount
+		totalContentCounts.AnnouncementViews += row.AnnouncementViews
+		totalContentCounts.FeatureViews += row.FeatureViews
+		totalContentCounts.BannerViews += row.BannerViews
 	}
 
 	monthlySum := AccessLogMonthlyRow{
