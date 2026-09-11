@@ -1,64 +1,48 @@
-name: Deploy to Production EC2
+name: Deploy Backend to EC2
 
 on:
   push:
-    branches:
-      - main # または master
+    branches: [main]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.25" # サーバーのGoバージョンに合わせて調整
-
-      - name: Build Go Backend Binary
-        run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o package-forest-backend main.go
-
       - name: Set up SSH Key
-        env:
-          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
         run: |
           mkdir -p ~/.ssh
-          echo "$EC2_SSH_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts || true
 
-      - name: Deploy to EC2 via rsync & SSH
-        env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
-          EC2_USER: ${{ secrets.EC2_USER }}
+      - name: Transfer backend files to EC2 temp dir
         run: |
-          set -x
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p /home/ubuntu/temp-backend"
+          rsync -avz --exclude '.git' -e "ssh -i ~/.ssh/id_rsa" ./ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/temp-backend/
 
-          # 既知のホストに追加
-          mkdir -p ~/.ssh
-          ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts || true
-          chmod 600 ~/.ssh/known_hosts
+      - name: Build, Migrate and Restart on EC2
+        run: |
+          ssh -i ~/.ssh/id_rsa ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            set -x
 
-          # 1. 一旦 ubuntu ユーザーが書き込めるホームディレクトリの temp フォルダへ転送
-          ssh -i ~/.ssh/id_rsa $EC2_USER@$EC2_HOST "mkdir -p /home/ubuntu/temp-build"
-          rsync -avz -e "ssh -i ~/.ssh/id_rsa" ./package-forest-backend $EC2_USER@$EC2_HOST:/home/ubuntu/temp-build/
+            # 1. 正式なバックエンドディレクトリへファイルを反映（ストレージ等のシンボリックリンクや既存ログは保護）
+            sudo rsync -a --delete --exclude 'storage' --exclude 'logs' /home/ubuntu/temp-backend/ /opt/package-forest/app/backend/
 
-          # 2. EC2側で sudo を使って正式なアプリディレクトリへの移動、マイグレーション、サービス再起動を行う
-          ssh -i ~/.ssh/id_rsa $EC2_USER@$EC2_HOST << 'EOF'
-            # 正式なディレクトリへバイナリを移動
-            sudo mv /home/ubuntu/temp-build/package-forest-backend /opt/package-forest/app/backend/package-forest-backend
+            # 2. 所有者を package-forest に変更
+            sudo chown -R package-forest:package-forest /opt/package-forest/app/backend/
 
-            # 権限の調整
-            sudo chown package-forest:package-forest /opt/package-forest/app/backend/package-forest-backend
-            sudo chmod +x /opt/package-forest/app/backend/package-forest-backend
+            # 3. package-forest ユーザーで Go のビルドを実行 (EC2のARM64環境で直接コンパイル)
+            sudo -u package-forest bash -lc 'cd /opt/package-forest/app/backend && /usr/local/go/bin/go build -o package-forest-backend . && /usr/local/go/bin/go build -o package-forest-migrate ./cmd/migrate'
 
-            # 3. マイグレーションの実行 (package-forest ユーザーで環境変数を読み込んで実行)
+            # 4. マイグレーションの実行
             sudo -u package-forest bash -lc 'set -a; source /etc/package-forest/backend.env; set +a; /opt/package-forest/app/backend/package-forest-migrate up'
 
-            # 4. アプリケーションの再起動
+            # 5. アプリケーションの再起動
             sudo systemctl restart package-forest-backend
-            echo "Successfully deployed, migrated, and restarted package-forest-backend!"
+
+            echo "Backend successfully deployed, built, migrated, and restarted!"
           EOF
