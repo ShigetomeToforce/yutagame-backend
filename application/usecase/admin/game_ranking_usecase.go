@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"fmt"
+	"sort"
 	"yutagame-backend/domain/model"
 	"yutagame-backend/infrastructure/database"
 )
@@ -96,10 +97,31 @@ func (u *GameRankingUseCase) GetDefaultOrder(ctx context.Context) ([]GameRanking
 	if err != nil {
 		return nil, err
 	}
-	database.SortGamesByReleaseDateAsc(games)
+	activeRanks, err := u.rankingRepo.GetActiveRanksByGameID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	sort.SliceStable(games, func(i, j int) bool {
+		iRank, iRanked := activeRanks[games[i].ID]
+		jRank, jRanked := activeRanks[games[j].ID]
+		if iRanked && jRanked {
+			if iRank != jRank {
+				return iRank < jRank
+			}
+			return games[i].ReleaseDate.After(games[j].ReleaseDate)
+		}
+		if iRanked != jRanked {
+			return iRanked
+		}
+		if !games[i].ReleaseDate.Equal(games[j].ReleaseDate) {
+			return games[i].ReleaseDate.After(games[j].ReleaseDate)
+		}
+		return games[i].ID < games[j].ID
+	})
 	result := make([]GameRankingListItem, 0, len(games))
-	for idx, game := range games {
-		result = append(result, u.buildListItem(game, idx+1))
+	for _, game := range games {
+		rank := activeRanks[game.ID]
+		result = append(result, u.buildListItem(game, rank))
 	}
 	return result, nil
 }

@@ -362,6 +362,7 @@ func main() {
 			adminProtected.GET("/access-logs/search-rankings", accessLogHandler.GetSearchRankingDashboard)
 			adminProtected.GET("/access-logs/game-views", accessLogHandler.GetGameViewDashboard)
 			adminProtected.GET("/rankings", gameRankingHandler.GetCurrent)
+			adminProtected.GET("/rankings/edit-order", gameRankingHandler.GetEditOrder)
 			adminProtected.GET("/rankings/draft", gameRankingHandler.GetDraft)
 			adminProtected.GET("/rankings/active", gameRankingHandler.GetActive)
 			adminProtected.POST("/rankings/draft", gameRankingHandler.SaveDraft)

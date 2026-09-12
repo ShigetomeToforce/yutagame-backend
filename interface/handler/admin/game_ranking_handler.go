@@ -52,6 +52,14 @@ func (h *GameRankingHandler) GetActive(c echo.Context) error {
 	return c.JSON(http.StatusOK, items)
 }
 
+func (h *GameRankingHandler) GetEditOrder(c echo.Context) error {
+	items, err := h.useCase.GetDefaultOrder(c.Request().Context())
+	if err != nil {
+		return handler.RespondError(c, http.StatusInternalServerError, err)
+	}
+	return c.JSON(http.StatusOK, items)
+}
+
 func (h *GameRankingHandler) SaveDraft(c echo.Context) error {
 	var req SaveDraftRequest
 	if err := c.Bind(&req); err != nil {
