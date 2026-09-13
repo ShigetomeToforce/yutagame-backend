@@ -20,29 +20,43 @@ import (
 
 // GameSaveRequest ゲーム情報保存時にクライアントから送信されるJSONリクエスト
 type GameSaveRequest struct {
-	Name            string  `json:"name"`
-	Kana            string  `json:"kana"`
-	Overview        string  `json:"overview"`
-	Code            string  `json:"code"`
-	ManufacturerID  int64   `json:"manufacturerId"`
-	MachineID       int64   `json:"machineId"`
-	GenreID         int64   `json:"genreId"`
-	SubGenre        string  `json:"subGenre"`
-	CatchCopy       string  `json:"catchCopy"`
-	SubCatch        string  `json:"subCatch"`
-	ListPrice       int32   `json:"listPrice"`
-	ReleaseDate     string  `json:"releaseDate"` // フロントからは文字列("YYYY-MM-DD")で受け取る
-	OfficialSiteURL string  `json:"officialSiteUrl"`
-	YouTubeURL      string  `json:"youtubeUrl"`
-	IsPlay          bool    `json:"isPlay"`
-	IsClear         bool    `json:"isClear"`
-	IsFavourite     bool    `json:"isFavourite"`
-	KeywordIDs      []int64 `json:"keywordIds"` // 💡 紐付けるキーワードのID配列
+	Name               string  `json:"name"`
+	Kana               string  `json:"kana"`
+	Overview           string  `json:"overview"`
+	Code               string  `json:"code"`
+	ManufacturerID     int64   `json:"manufacturerId"`
+	MachineID          int64   `json:"machineId"`
+	GenreID            int64   `json:"genreId"`
+	SubGenre           string  `json:"subGenre"`
+	CatchCopy          string  `json:"catchCopy"`
+	SubCatch           string  `json:"subCatch"`
+	ListPrice          int32   `json:"listPrice"`
+	SurugayaID         *string `json:"surugayaId"`
+	ReferenceUsedPrice *int32  `json:"referenceUsedPrice"`
+	ReferenceBuyPrice  *int32  `json:"referenceBuyPrice"`
+	ReleaseDate        string  `json:"releaseDate"` // フロントからは文字列("YYYY-MM-DD")で受け取る
+	OfficialSiteURL    string  `json:"officialSiteUrl"`
+	YouTubeURL         string  `json:"youtubeUrl"`
+	IsPlay             bool    `json:"isPlay"`
+	IsClear            bool    `json:"isClear"`
+	IsFavourite        bool    `json:"isFavourite"`
+	KeywordIDs         []int64 `json:"keywordIds"` // 💡 紐付けるキーワードのID配列
 }
 
 type GameAffiliateSaveRequest struct {
 	Category string `json:"category"`
 	URL      string `json:"url"`
+}
+
+func optionalTrimmedString(value *string) *string {
+	if value == nil {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*value)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
 }
 
 // GameHandler ゲームに関連するHTTPリクエストの受付とレスポンスの制御を担当するハンドラー
@@ -89,23 +103,26 @@ func (h *GameHandler) Create(c echo.Context) error {
 	}
 
 	game := model.Game{
-		Name:            req.Name,
-		Kana:            req.Kana,
-		Overview:        req.Overview,
-		Code:            req.Code,
-		ManufacturerID:  req.ManufacturerID,
-		MachineID:       req.MachineID,
-		GenreID:         req.GenreID,
-		SubGenre:        req.SubGenre,
-		CatchCopy:       req.CatchCopy,
-		SubCatch:        req.SubCatch,
-		ListPrice:       req.ListPrice,
-		ReleaseDate:     releaseDate,
-		OfficialSiteURL: req.OfficialSiteURL,
-		YouTubeURL:      req.YouTubeURL,
-		IsPlay:          req.IsPlay,
-		IsClear:         req.IsClear,
-		IsFavourite:     req.IsFavourite,
+		Name:               req.Name,
+		Kana:               req.Kana,
+		Overview:           req.Overview,
+		Code:               req.Code,
+		ManufacturerID:     req.ManufacturerID,
+		MachineID:          req.MachineID,
+		GenreID:            req.GenreID,
+		SubGenre:           req.SubGenre,
+		CatchCopy:          req.CatchCopy,
+		SubCatch:           req.SubCatch,
+		ListPrice:          req.ListPrice,
+		SurugayaID:         optionalTrimmedString(req.SurugayaID),
+		ReferenceUsedPrice: req.ReferenceUsedPrice,
+		ReferenceBuyPrice:  req.ReferenceBuyPrice,
+		ReleaseDate:        releaseDate,
+		OfficialSiteURL:    req.OfficialSiteURL,
+		YouTubeURL:         req.YouTubeURL,
+		IsPlay:             req.IsPlay,
+		IsClear:            req.IsClear,
+		IsFavourite:        req.IsFavourite,
 	}
 
 	ctx := c.Request().Context()
@@ -264,24 +281,27 @@ func (h *GameHandler) Update(c echo.Context) error {
 	}
 
 	game := model.Game{
-		ID:              id,
-		Name:            req.Name,
-		Kana:            req.Kana,
-		Overview:        req.Overview,
-		Code:            req.Code,
-		ManufacturerID:  req.ManufacturerID,
-		MachineID:       req.MachineID,
-		GenreID:         req.GenreID,
-		SubGenre:        req.SubGenre,
-		CatchCopy:       req.CatchCopy,
-		SubCatch:        req.SubCatch,
-		ListPrice:       req.ListPrice,
-		ReleaseDate:     releaseDate,
-		OfficialSiteURL: req.OfficialSiteURL,
-		YouTubeURL:      req.YouTubeURL,
-		IsPlay:          req.IsPlay,
-		IsClear:         req.IsClear,
-		IsFavourite:     req.IsFavourite,
+		ID:                 id,
+		Name:               req.Name,
+		Kana:               req.Kana,
+		Overview:           req.Overview,
+		Code:               req.Code,
+		ManufacturerID:     req.ManufacturerID,
+		MachineID:          req.MachineID,
+		GenreID:            req.GenreID,
+		SubGenre:           req.SubGenre,
+		CatchCopy:          req.CatchCopy,
+		SubCatch:           req.SubCatch,
+		ListPrice:          req.ListPrice,
+		SurugayaID:         optionalTrimmedString(req.SurugayaID),
+		ReferenceUsedPrice: req.ReferenceUsedPrice,
+		ReferenceBuyPrice:  req.ReferenceBuyPrice,
+		ReleaseDate:        releaseDate,
+		OfficialSiteURL:    req.OfficialSiteURL,
+		YouTubeURL:         req.YouTubeURL,
+		IsPlay:             req.IsPlay,
+		IsClear:            req.IsClear,
+		IsFavourite:        req.IsFavourite,
 	}
 
 	ctx := c.Request().Context()
